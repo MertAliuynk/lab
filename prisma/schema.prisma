@@ -1,0 +1,424 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  username             String                @unique
+  password             String
+  role                 UserRole
+  name                 String
+  email                String?
+  phone                String?
+  image                String?
+  isDeleted            Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  clinicManager        ClinicManager?
+  dentist              Dentist?
+  expenses             Expense[]
+  incomes              Income[]
+  laboratoryTechnician LaboratoryTechnician?
+  notificationReads    NotificationRead[]
+}
+
+model Dentist {
+  id               String            @id @default(cuid())
+  title            String?
+  isDeleted        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  userId           String            @unique
+  clinicId         String
+  dentalWorks      DentalWork[]
+  clinic           Clinic            @relation(fields: [clinicId], references: [id])
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomes          Income[]
+  patients         Patient[]
+  patientNotes     PatientNote[]
+  payments         Payment[]
+  patientFeedbacks PatientFeedback[]
+  stageHistories   StageHistory[]
+}
+
+model LaboratoryTechnician {
+  id                     String                   @id @default(cuid())
+  name                   String
+  specialization         String?
+  isDeleted              Boolean                  @default(false)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  userId                 String                   @unique
+  dentalWorks            DentalWork[]
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stageHistories         StageHistory[]
+  technicianStageHistory TechnicianStageHistory[]
+  patientFeedbacks       PatientFeedback[]
+}
+
+model ClinicManager {
+  id        String   @id @default(cuid())
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @unique
+  clinicId  String   @unique
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Clinic {
+  id                     String                  @id @default(cuid())
+  name                   String
+  address                String?
+  isDeleted              Boolean                 @default(false)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  manager                ClinicManager?
+  clinicProsthesisPrices ClinicProsthesisPrice[]
+  dentists               Dentist[]
+  incomes                Income[]
+  patients               Patient[]
+  payments               Payment[]
+}
+
+model Patient {
+  id                     String            @id @default(cuid())
+  name                   String
+  notes                  String?
+  isDeleted              Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  dentistId              String
+  clinicId               String
+  completedAt            DateTime?
+  isCompleted            Boolean           @default(false)
+  isSentToTechnician     Boolean           @default(false)
+  lastSentToTechnicianAt DateTime?
+  dentalWorks            DentalWork[]
+  clinic                 Clinic            @relation(fields: [clinicId], references: [id])
+  dentist                Dentist           @relation(fields: [dentistId], references: [id])
+  patientNotes           PatientNote[]
+  patientFeedbacks       PatientFeedback[]
+}
+
+model ProsthesisType {
+  id                      String                   @id @default(cuid())
+  name                    String
+  description             String?
+  defaultPrice            Int?
+  pricingType             PricingType              @default(TOOTH_BASED)
+  isDeleted               Boolean                  @default(false)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  clinicProsthesisPrices  ClinicProsthesisPrice[]
+  dentalWorks             DentalWork[]
+  favoriteProsthesisTypes FavoriteProsthesisType[]
+}
+
+model FavoriteProsthesisType {
+  id               String         @id @default(cuid())
+  prosthesisTypeId String
+  order            Int            @default(0)
+  isDeleted        Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  prosthesisType   ProsthesisType @relation(fields: [prosthesisTypeId], references: [id], onDelete: Cascade)
+}
+
+model AdditionalTreatment {
+  id                             String                          @id @default(cuid())
+  name                           String
+  description                    String?
+  defaultPrice                   Int?
+  isDeleted                      Boolean                         @default(false)
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+  dentalWorkAdditionalTreatments DentalWorkAdditionalTreatment[]
+}
+
+model DentalWorkAdditionalTreatment {
+  id                    String              @id @default(cuid())
+  dentalWorkId          String
+  additionalTreatmentId String
+  price                 Int?
+  quantity              Int?                @default(1)
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  dentalWork            DentalWork          @relation(fields: [dentalWorkId], references: [id], onDelete: Cascade)
+  additionalTreatment   AdditionalTreatment @relation(fields: [additionalTreatmentId], references: [id])
+}
+
+model ToothColor {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  isDeleted   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  dentalWorks DentalWork[]
+}
+
+model DentalWork {
+  id                             String                          @id @default(cuid())
+  notes                          String?
+  jawType                        JawType?
+  selectedTeeth                  String[]
+  selectedJaws                   String[]                        @default([])
+  deliveryDate                   DateTime?
+  unitPrice                      Decimal?                        @db.Decimal(10, 2)
+  totalPrice                     Decimal?                        @db.Decimal(10, 2)
+  attachments                    Json?
+  isCompleted                    Boolean                         @default(false)
+  isDeleted                      Boolean                         @default(false)
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+  patientId                      String
+  dentistId                      String
+  prosthesisTypeId               String
+  toothColorId                   String?
+  prosthesisStageId              String?
+  laboratoryTechnicianId         String?
+  technicianStageId              String?
+  dentist                        Dentist                         @relation(fields: [dentistId], references: [id])
+  laboratoryTechnician           LaboratoryTechnician?           @relation(fields: [laboratoryTechnicianId], references: [id])
+  patient                        Patient                         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prosthesisStage                ProsthesisStage?                @relation(fields: [prosthesisStageId], references: [id])
+  prosthesisType                 ProsthesisType                  @relation(fields: [prosthesisTypeId], references: [id])
+  technicianStage                TechnicianStage?                @relation(fields: [technicianStageId], references: [id])
+  toothColor                     ToothColor?                     @relation(fields: [toothColorId], references: [id])
+  payments                       Payment[]
+  stageHistories                 StageHistory[]
+  technicianStageHistories       TechnicianStageHistory[]
+  trials                         Trial[]
+  dentalWorkAdditionalTreatments DentalWorkAdditionalTreatment[]
+}
+
+model ProsthesisStage {
+  id             String         @id @default(cuid())
+  name           String
+  description    String?
+  order          Int            @default(0)
+  percentage     Int            @default(0)
+  price          Int?
+  isDeleted      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  dentalWorks    DentalWork[]
+  stageHistories StageHistory[]
+}
+
+model TechnicianStage {
+  id                       String                   @id @default(cuid())
+  name                     String
+  description              String?
+  order                    Int                      @default(0)
+  price                    Int?
+  isDeleted                Boolean                  @default(false)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  dentalWorks              DentalWork[]
+  technicianStageHistories TechnicianStageHistory[]
+}
+
+model Trial {
+  id           String     @id @default(cuid())
+  notes        String?
+  isDeleted    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  dentalWorkId String
+  dentalWork   DentalWork @relation(fields: [dentalWorkId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id           String      @id @default(cuid())
+  amount       Decimal     @db.Decimal(10, 2)
+  paymentDate  DateTime
+  paymentType  PaymentType
+  notes        String?
+  isDeleted    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  dentistId    String?
+  clinicId     String?
+  dentalWorkId String?
+  clinic       Clinic?     @relation(fields: [clinicId], references: [id])
+  dentalWork   DentalWork? @relation(fields: [dentalWorkId], references: [id], onDelete: Cascade)
+  dentist      Dentist?    @relation(fields: [dentistId], references: [id])
+}
+
+model Income {
+  id          String      @id @default(cuid())
+  amount      Decimal     @db.Decimal(10, 2)
+  description String?
+  date        DateTime
+  paymentType PaymentType
+  isDeleted   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdById String
+  clinicId    String
+  dentistId   String?
+  clinic      Clinic      @relation(fields: [clinicId], references: [id])
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  dentist     Dentist?    @relation(fields: [dentistId], references: [id])
+}
+
+model ExpenseType {
+  id        String    @id @default(cuid())
+  name      String
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expenses  Expense[]
+}
+
+model Expense {
+  id            String       @id @default(cuid())
+  amount        Decimal      @db.Decimal(10, 2)
+  description   String
+  date          DateTime
+  paymentType   PaymentType
+  isDeleted     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdById   String
+  expenseTypeId String?
+  createdBy     User         @relation(fields: [createdById], references: [id])
+  expenseType   ExpenseType? @relation(fields: [expenseTypeId], references: [id])
+}
+
+model PatientNote {
+  id        String   @id @default(cuid())
+  content   String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  patientId String
+  dentistId String
+  dentist   Dentist  @relation(fields: [dentistId], references: [id])
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model StageHistory {
+  id                     String                @id @default(cuid())
+  notes                  String?
+  attachments            Json?
+  createdAt              DateTime              @default(now())
+  dentalWorkId           String
+  prosthesisStageId      String?
+  laboratoryTechnicianId String?
+  dentistId              String?
+  dentalWork             DentalWork            @relation(fields: [dentalWorkId], references: [id], onDelete: Cascade)
+  laboratoryTechnician   LaboratoryTechnician? @relation(fields: [laboratoryTechnicianId], references: [id])
+  prosthesisStage        ProsthesisStage?      @relation(fields: [prosthesisStageId], references: [id])
+  dentist                Dentist?              @relation(fields: [dentistId], references: [id])
+}
+
+model TechnicianStageHistory {
+  id                     String                @id @default(cuid())
+  notes                  String?
+  attachments            Json?
+  createdAt              DateTime              @default(now())
+  dentalWorkId           String
+  technicianStageId      String?
+  laboratoryTechnicianId String?
+  dentalWork             DentalWork            @relation(fields: [dentalWorkId], references: [id], onDelete: Cascade)
+  laboratoryTechnician   LaboratoryTechnician? @relation(fields: [laboratoryTechnicianId], references: [id])
+  technicianStage        TechnicianStage?      @relation(fields: [technicianStageId], references: [id])
+}
+
+model ClinicProsthesisPrice {
+  id               String         @id @default(cuid())
+  price            Int
+  isDeleted        Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  clinicId         String
+  prosthesisTypeId String
+  clinic           Clinic         @relation(fields: [clinicId], references: [id])
+  prosthesisType   ProsthesisType @relation(fields: [prosthesisTypeId], references: [id])
+
+  @@unique([clinicId, prosthesisTypeId])
+}
+
+model Notification {
+  id             String             @id @default(cuid())
+  patientName    String
+  patientId      String?
+  prosthesisType String
+  newStage       String
+  dentistName    String
+  clinicName     String
+  dentalWorkId   String? // Feedback için null olabilir
+  createdAt      DateTime           @default(now())
+  readStatus     NotificationRead[]
+}
+
+model NotificationRead {
+  id             String       @id @default(cuid())
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  notificationId String
+  userId         String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+}
+
+enum UserRole {
+  ADMIN
+  CLINIC_MANAGER
+  DENTIST
+  LABORATORY_TECHNICIAN
+}
+
+enum PaymentType {
+  BANK_TRANSFER
+  CREDIT_CARD
+  CASH
+}
+
+enum JawType {
+  UPPER
+  LOWER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum PricingType {
+  TOOTH_BASED
+  JAW_BASED
+}
+
+model PatientFeedback {
+  id                     String   @id @default(cuid())
+  patientId              String
+  dentistId              String
+  laboratoryTechnicianId String?
+  feedbackText           String
+  // 5 puanlama kategorisi (1-5 arası)
+  infrastructureRating   Int      @default(0) // Altyapıyı nasıl buldunuz
+  speedRating            Int      @default(0) // İşlerin bitiş hızını nasıl buldunuz
+  colorRating            Int      @default(0) // Renk uyumunu nasıl buldunuz
+  designRating           Int      @default(0) // Dişlerin tasarımını nasıl buldunuz
+  aestheticsRating       Int      @default(0) // İşin estetiğini nasıl buldunuz
+  isDeleted              Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  patient              Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  dentist              Dentist               @relation(fields: [dentistId], references: [id], onDelete: Cascade)
+  laboratoryTechnician LaboratoryTechnician? @relation(fields: [laboratoryTechnicianId], references: [id])
+}
