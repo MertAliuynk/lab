@@ -1,7 +1,6 @@
 "use client";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ClipboardPlus, Edit, Plus, Trash2 } from "lucide-react";
-import FileUploadArea from "./file-upload-area";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import ToothGroupDialog from "./tooth-group-dialog";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -28,6 +27,7 @@ interface ToothGroup {
 	prosthesisType: string;
 	prosthesisStage: string;
 	notes?: string;
+	deliveryDate?: Date;
 }
 
 interface UploadedFile {
@@ -42,6 +42,7 @@ const formSchema = z
 		patientName: z.string().optional(),
 		toothColor: z.string().min(1, "Diş rengi seçmelisiniz"),
 		notes: z.string().optional(),
+		deliveryDate: z.date().optional(),
 		files: z
 			.array(
 				z.object({
@@ -93,6 +94,7 @@ export default function AddProsthesisSheet() {
 			patientId: contextPatientId || "",
 			patientName: "",
 			notes: "",
+			deliveryDate: undefined,
 			files: [],
 			tempGroup: {
 				selectedTeeth: [],
@@ -117,7 +119,6 @@ export default function AddProsthesisSheet() {
 		{ enabled: !!selectedPatientId },
 	);
 
-	// Context'ten gelen patientId'yi form'a set et
 	useEffect(() => {
 		if (contextPatientId) {
 			form.setValue("patientId", contextPatientId);
@@ -158,6 +159,7 @@ export default function AddProsthesisSheet() {
 					toothColorId: values.toothColor,
 					selectedTeeth: firstGroup.selectedTeeth.map(String),
 					selectedJaws: firstGroup.selectedJaws,
+					deliveryDate: values.deliveryDate,
 					notes: values.notes,
 					attachments: uploadedFiles.length > 0 ? uploadedFiles : undefined,
 				});
@@ -174,6 +176,7 @@ export default function AddProsthesisSheet() {
 							toothColorId: values.toothColor,
 							selectedTeeth: group.selectedTeeth.map(String),
 							selectedJaws: group.selectedJaws,
+							deliveryDate: values.deliveryDate,
 							notes: values.notes,
 							attachments: uploadedFiles.length > 0 ? uploadedFiles : undefined,
 						});
@@ -188,6 +191,7 @@ export default function AddProsthesisSheet() {
 						toothColorId: values.toothColor,
 						selectedTeeth: group.selectedTeeth.map(String),
 						selectedJaws: group.selectedJaws,
+						deliveryDate: values.deliveryDate,
 						notes: values.notes,
 						attachments: uploadedFiles.length > 0 ? uploadedFiles : undefined,
 					});
@@ -202,7 +206,8 @@ export default function AddProsthesisSheet() {
 
 			await utils.invalidate();
 			router.refresh();
-		} catch {
+		} catch (error) {
+			console.error(error);
 			toast.error("Protez eklenirken bir hata oluştu");
 		}
 	};
@@ -281,7 +286,7 @@ export default function AddProsthesisSheet() {
 	};
 
 	return (
-		   <Sheet open={isOpen} onOpenChange={(open) => !open && closeSheet()}>
+		<Sheet open={isOpen} onOpenChange={(open) => !open && closeSheet()}>
 			<SheetContent className="min-w-2xl max-h-screen overflow-y-auto">
 				<SheetHeader>
 					<SheetTitle>Protez Ekle</SheetTitle>
@@ -322,6 +327,24 @@ export default function AddProsthesisSheet() {
 								)}
 							/>
 						</div>
+
+						<FormField
+							control={form.control}
+							name="deliveryDate"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>İş Teslim Tarihi</FormLabel>
+									<FormControl>
+										<Input
+											type="date"
+											onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+											value={field.value ? field.value.toISOString().split('T')[0] : ""}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
 						<div className="space-y-4">
 							<div className="flex items-center justify-between">
@@ -408,13 +431,6 @@ export default function AddProsthesisSheet() {
 									))}
 								</div>
 							)}
-
-							{toothGroups.length > 0 && (
-								<div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-									<p>Toplam {toothGroups.length} protez oluşturuldu</p>
-									<p>Toplam {toothGroups.reduce((sum, group) => sum + group.selectedTeeth.length, 0)} diş seçildi</p>
-								</div>
-							)}
 						</div>
 
 						<FormField
@@ -442,25 +458,6 @@ export default function AddProsthesisSheet() {
 											placeholder="Bu protez işlemi hakkında notlarınızı yazabilirsiniz..."
 											className="min-h-[80px]"
 											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="files"
-							render={() => (
-								<FormItem>
-									<FormLabel>Fotoğraf ve Video</FormLabel>
-									<FormControl>
-										<FileUploadArea
-											onFilesChange={(files) => {
-												setUploadedFiles(files);
-												form.setValue("files", files);
-											}}
 										/>
 									</FormControl>
 									<FormMessage />

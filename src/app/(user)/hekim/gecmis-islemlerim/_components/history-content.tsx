@@ -135,9 +135,6 @@ export async function HistoryContent({ searchParams }: HistoryContentProps) {
 													   {add.price !== null && (
 														   <div className="text-xs text-green-700">₺{add.price?.toLocaleString('tr-TR')}</div>
 													   )}
-													   {add.notes && (
-														   <div className="text-xs text-gray-600 mt-1">Not: {add.notes}</div>
-													   )}
 												   </div>
 											   ))}
 										   </div>

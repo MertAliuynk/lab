@@ -49,6 +49,14 @@ export const removeAdditionalTreatmentSchema = z.object({
 export const getAdditionalTreatmentsSchema = z.object({
 	dentalWorkId: z.string(),
 });
+export const getDentalWorksByDeliveryDateSchema = z.object({
+	date: z.date(),                    // Seçilen tarih
+	clinicId: z.string().optional(),
+	dentistId: z.string().optional(),
+	page: z.number().optional().default(1),
+	perPage: z.number().optional().default(20),
+});
+
 
 export const createProsthesisSchema = z
 	.object({

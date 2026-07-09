@@ -87,7 +87,7 @@ export default function PaymentClient({ paymentSummary, totalStats }: Props) {
 								<div className="text-3xl font-bold text-orange-700 mb-1">
 									{formatCurrency(totalStats?.totalDebt || 0)}
 								</div>
-								<div className="text-sm text-orange-600 font-medium">Toplam Borç</div>
+								<div className="text-sm text-orange-600 font-medium">Toplam Alınacak Miktar</div>
 								<div className="w-full h-1 bg-orange-200 rounded-full mt-3">
 									<div className="h-1 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full w-full" />
 								</div>
@@ -123,7 +123,7 @@ export default function PaymentClient({ paymentSummary, totalStats }: Props) {
 										: 'text-green-600'
 								} font-medium`}>
 									{(totalStats?.remainingDebt || 0) > 0 
-										? 'Kalan Borç' 
+										? 'Kalan Alınacak Miktar' 
 										: (totalStats?.remainingDebt || 0) < 0 
 											? 'Toplam Alacak' 
 											: 'Borçsuz'

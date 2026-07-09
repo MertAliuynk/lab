@@ -32,7 +32,7 @@ const formSchema = z.object({
 		}),
 	description: z.string().min(1, "Açıklama gereklidir"),
 	paymentType: z.enum(["CASH", "CREDIT_CARD", "BANK_TRANSFER"]),
-	expenseTypeId: z.string().min(1, "Gider türü gereklidir"),
+	expenseTypeId: z.string(),
 });
 
 type FormValues = z.infer<typeof formSchema>;

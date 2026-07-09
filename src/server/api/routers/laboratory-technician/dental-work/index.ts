@@ -1,15 +1,16 @@
 import { createTRPCRouter, laboratoryTechnicianProcedure } from "@/server/api/trpc";
-import { 
-	getAllDentalWorksSchema, 
-	getDentalWorkByIdSchema, 
-	getStageHistorySchema, 
-	getTechnicianStageHistorySchema, 
+import {
+	getAllDentalWorksSchema,
+	getDentalWorkByIdSchema,
+	getStageHistorySchema,
+	getTechnicianStageHistorySchema,
 	updateTechnicianStageSchema,
 	addAdditionalTreatmentSchema,
 	removeAdditionalTreatmentSchema,
 	getAdditionalTreatmentsSchema,
 	createProsthesisSchema,
-	deleteProsthesisSchema
+	deleteProsthesisSchema,
+	getDentalWorksByDeliveryDateSchema
 } from "./schema";
 
 export const dentalWorkRouter = createTRPCRouter({
@@ -114,6 +115,8 @@ export const dentalWorkRouter = createTRPCRouter({
 
 		return stageHistory;
 	}),
+
+
 
 	getTechnicianStageHistory: laboratoryTechnicianProcedure.input(getTechnicianStageHistorySchema).query(async ({ ctx, input }) => {
 		const technicianStageHistory = await ctx.db.technicianStageHistory.findMany({
@@ -228,6 +231,66 @@ export const dentalWorkRouter = createTRPCRouter({
 
 			return { success: true };
 		}),
+	getByDeliveryDate: laboratoryTechnicianProcedure
+		.input(getDentalWorksByDeliveryDateSchema)
+		.query(async ({ ctx, input }) => {
+			const { date, clinicId, dentistId, page = 1, perPage = 20 } = input;
+			const skip = (page - 1) * perPage;
+
+			const startOfDay = new Date(date);
+			startOfDay.setHours(0, 0, 0, 0);
+
+			const endOfDay = new Date(date);
+			endOfDay.setHours(23, 59, 59, 999);
+
+			const where: any = {
+				isDeleted: false,
+				deliveryDate: {
+					gte: startOfDay,
+					lt: endOfDay,
+				},
+			};
+
+			if (clinicId) {
+				where.dentist = { clinicId };
+			}
+			if (dentistId) {
+				where.dentistId = dentistId;
+			}
+
+			const [dentalWorks, total] = await Promise.all([
+				ctx.db.dentalWork.findMany({
+					where,
+					include: {
+						patient: true,
+						prosthesisType: true,
+						prosthesisStage: true,
+						toothColor: true,
+						dentist: {
+							include: {
+								user: true,
+								clinic: true,
+							},
+						},
+						laboratoryTechnician: true,
+					},
+					orderBy: [{ deliveryDate: "asc" }, { createdAt: "desc" }],
+					skip,
+					take: perPage,
+				}),
+				ctx.db.dentalWork.count({ where }),
+			]);
+
+			return {
+				dentalWorks,
+				pagination: {
+					page,
+					perPage,
+					total,
+					totalPages: Math.ceil(total / perPage),
+				},
+			};
+		}),
 
 	createProsthesis: laboratoryTechnicianProcedure
 		.input(createProsthesisSchema)
@@ -305,7 +368,7 @@ export const dentalWorkRouter = createTRPCRouter({
 			}
 
 			// NOT: Ödeme kaydı hasta bitimi yapıldığında oluşturulacak
-			
+
 			return dentalWork;
 		}),
 

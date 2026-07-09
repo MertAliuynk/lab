@@ -18,14 +18,14 @@ type SearchFilterProps = {
 	searchQuery: string;
 };
 
-export function SearchFilter({ 
-	onStatusChange, 
-	onLocationChange, 
-	onSearchChange, 
-	patients = [], 
-	statusFilter, 
-	locationFilter, 
-	searchQuery 
+export function SearchFilter({
+	onStatusChange,
+	onLocationChange,
+	onSearchChange,
+	patients = [],
+	statusFilter,
+	locationFilter,
+	searchQuery
 }: SearchFilterProps) {
 	const [, setSearchQuery] = useQueryState("q", parseAsString.withDefault(""));
 	const [inputValue, setInputValue] = useState(searchQuery);
@@ -49,7 +49,9 @@ export function SearchFilter({
 	};
 
 	useEffect(() => {
-		setInputValue(searchQuery);
+		if (searchQuery !== inputValue) {
+			setInputValue(searchQuery);
+		}
 	}, [searchQuery]);
 
 
@@ -58,7 +60,7 @@ export function SearchFilter({
 	const allDentalWorks = patients.flatMap(patient => patient.dentalWorks || []);
 	const totalPatients = patients.length;
 	const totalDentalWorks = allDentalWorks.length;
-	
+
 	// Manuel bitim kontrolü ile tamamlanan işleri say
 	const completedPatients = patients.filter(patient => patient.isCompleted).length;
 	const pendingPatients = totalPatients - completedPatients;
