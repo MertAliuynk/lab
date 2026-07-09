@@ -138,7 +138,7 @@ export default async function Page({
 		},
 		{
 		title: "İşlem Takvimi",
-		url: "/teknisyen/İslemTakvimi",  
+		url: "/teknisyen/takvim",  
 		icon: "Calendar",
 	},
 		{
