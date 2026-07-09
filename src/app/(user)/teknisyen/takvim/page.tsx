@@ -85,12 +85,12 @@ export default function DeliveryListPage() {
 
       <div className="flex gap-4 mb-6">
         <div className="w-64">
-          <Select value={clinicId} onValueChange={setClinicId}>
+          <Select value={clinicId || "all"} onValueChange={(val) => setClinicId(val === "all" ? "" : val)}>
             <SelectTrigger>
               <SelectValue placeholder="Tüm Şubeler" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tüm Şubeler</SelectItem>
+              <SelectItem value="all">Tüm Şubeler</SelectItem>
               {clinics?.map((clinic: any) => (
                 <SelectItem key={clinic.id} value={clinic.id}>
                   {clinic.name}
@@ -101,12 +101,12 @@ export default function DeliveryListPage() {
         </div>
 
         <div className="w-64">
-          <Select value={dentistId} onValueChange={setDentistId}>
+          <Select value={dentistId || "all"} onValueChange={(val) => setDentistId(val === "all" ? "" : val)}>
             <SelectTrigger>
               <SelectValue placeholder="Tüm Doktorlar" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tüm Doktorlar</SelectItem>
+              <SelectItem value="all">Tüm Doktorlar</SelectItem>
               {dentists?.map((dentist: any) => (
                 <SelectItem key={dentist.id} value={dentist.id}>
                   {dentist.user?.name}
@@ -120,14 +120,12 @@ export default function DeliveryListPage() {
       <div className="space-y-4">
         {isLoading ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <p>Yükleniyor...</p>
-            </CardContent>
+            <CardContent className="py-12 text-center">Yükleniyor...</CardContent>
           </Card>
         ) : dentalWorks.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Bu tarihte teslim edilecek iş bulunmuyor.</p>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Bu tarihte teslim edilecek iş bulunmuyor.
             </CardContent>
           </Card>
         ) : (
@@ -136,7 +134,7 @@ export default function DeliveryListPage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">
-                    {work.patient?.name} - {work.prosthesisType?.name}
+                    {work.patient?.name ?? "İsimsiz"} - {work.prosthesisType?.name ?? "-"}
                   </CardTitle>
                   <Badge variant={work.isCompleted ? "default" : "secondary"}>
                     {work.isCompleted ? "Tamamlandı" : "Devam Ediyor"}
@@ -145,21 +143,13 @@ export default function DeliveryListPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Doktor:</span> {work.dentist?.user?.name || "-"}
-                  </div>
-                  <div>
-                    <span className="font-medium">Şube:</span> {work.dentist?.clinic?.name || "-"}
-                  </div>
+                  <div><span className="font-medium">Doktor:</span> {work.dentist?.user?.name || "-"}</div>
+                  <div><span className="font-medium">Şube:</span> {work.dentist?.clinic?.name || "-"}</div>
                   <div>
                     <span className="font-medium">Teslim Tarihi:</span>{" "}
-                    {work.deliveryDate 
-                      ? format(new Date(work.deliveryDate), "dd MMM yyyy", { locale: tr }) 
-                      : "-"}
+                    {work.deliveryDate ? format(new Date(work.deliveryDate), "dd MMM yyyy", { locale: tr }) : "-"}
                   </div>
-                  <div>
-                    <span className="font-medium">Aşama:</span> {work.prosthesisStage?.name || "Belirtilmedi"}
-                  </div>
+                  <div><span className="font-medium">Aşama:</span> {work.prosthesisStage?.name || "-"}</div>
                 </div>
               </CardContent>
             </Card>
@@ -169,21 +159,9 @@ export default function DeliveryListPage() {
 
       {pagination && pagination.totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-8">
-          <Button 
-            disabled={page === 1} 
-            onClick={() => setPage(page - 1)}
-          >
-            Önceki Sayfa
-          </Button>
-          <span className="py-2 px-4 border rounded-md">
-            Sayfa {page} / {pagination.totalPages}
-          </span>
-          <Button 
-            disabled={page === pagination.totalPages} 
-            onClick={() => setPage(page + 1)}
-          >
-            Sonraki Sayfa
-          </Button>
+          <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Önceki</Button>
+          <span className="py-2 px-4 border rounded-md">Sayfa {page} / {pagination.totalPages}</span>
+          <Button disabled={page === pagination.totalPages} onClick={() => setPage(page + 1)}>Sonraki</Button>
         </div>
       )}
     </div>
