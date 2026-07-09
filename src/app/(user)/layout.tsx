@@ -137,6 +137,11 @@ export default async function Page({
 			icon: "Users",
 		},
 		{
+		title: "İşlem Takvimi",
+		url: "/teknisyen/İslemTakvimi",  
+		icon: "Calendar",
+	},
+		{
 			title: "Bildirimler",
 			url: "/teknisyen/bildirimler",
 			icon: "Bell",
