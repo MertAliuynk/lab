@@ -1,9 +1,184 @@
-import React from 'react'
+"use client";
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+import { useState } from "react";
+import { api } from "@/trpc/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+
+export default function DeliveryListPage() {
+	const [selectedDate, setSelectedDate] = useState(new Date());
+	const [clinicId, setClinicId] = useState<string>("");
+	const [dentistId, setDentistId] = useState<string>("");
+	const [page, setPage] = useState(1);
+
+	// DÜZELTİLDİ
+	const { data: clinics } = api.admin.clinic.getAll.useQuery({});
+	const { data: dentists } = api.admin.dentist.getAll.useQuery({});
+
+	const { data: result, isLoading } = api.laboratoryTechnician.dentalWork.getByDeliveryDate.useQuery({
+		date: selectedDate,
+		clinicId: clinicId || undefined,
+		dentistId: dentistId || undefined,
+		page: page,
+		perPage: 20,
+	});
+
+	const dentalWorks = result?.dentalWorks || [];
+	const pagination = result?.pagination;
+
+	const goToPreviousDay = () => {
+		const prevDay = new Date(selectedDate);
+		prevDay.setDate(prevDay.getDate() - 1);
+		setSelectedDate(prevDay);
+		setPage(1);
+	};
+
+	const goToNextDay = () => {
+		const nextDay = new Date(selectedDate);
+		nextDay.setDate(nextDay.getDate() + 1);
+		setSelectedDate(nextDay);
+		setPage(1);
+	};
+
+	const goToToday = () => {
+		setSelectedDate(new Date());
+		setPage(1);
+	};
+
+	return (
+		<div className="container mx-auto py-6">
+			<div className="flex justify-between items-center mb-6">
+				<h1 className="text-3xl font-bold">Teslim Tarihi Listesi</h1>
+				<div className="flex items-center gap-4">
+					<Button variant="outline" onClick={goToPreviousDay}>
+						<ChevronLeft className="w-4 h-4" />
+					</Button>
+					<Button onClick={goToToday} variant="outline">
+						Bugün
+					</Button>
+					<div className="flex items-center gap-2 px-4 py-2 border rounded-md">
+						<Calendar className="w-5 h-5" />
+						<span className="font-medium">
+							{format(selectedDate, "dd MMMM yyyy", { locale: tr })}
+						</span>
+					</div>
+					<Button variant="outline" onClick={goToNextDay}>
+						<ChevronRight className="w-4 h-4" />
+					</Button>
+				</div>
+			</div>
+
+			{/* Filtreler */}
+			<div className="flex gap-4 mb-6">
+				<div className="w-64">
+					<Select value={clinicId} onValueChange={setClinicId}>
+						<SelectTrigger>
+							<SelectValue placeholder="Tüm Şubeler" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="">Tüm Şubeler</SelectItem>
+							{clinics?.map((clinic: any) => (
+								<SelectItem key={clinic.id} value={clinic.id}>
+									{clinic.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				<div className="w-64">
+					<Select value={dentistId} onValueChange={setDentistId}>
+						<SelectTrigger>
+							<SelectValue placeholder="Tüm Doktorlar" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="">Tüm Doktorlar</SelectItem>
+							{dentists?.map((dentist: any) => (
+								<SelectItem key={dentist.id} value={dentist.id}>
+									{dentist.user?.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
+
+			{/* Liste */}
+			<div className="space-y-4">
+				{isLoading ? (
+					<Card>
+						<CardContent className="py-12 text-center">
+							<p>Yükleniyor...</p>
+						</CardContent>
+					</Card>
+				) : dentalWorks.length === 0 ? (
+					<Card>
+						<CardContent className="py-12 text-center">
+							<p className="text-muted-foreground">Bu tarihte teslim edilecek iş bulunmuyor.</p>
+						</CardContent>
+					</Card>
+				) : (
+					dentalWorks.map((work: any) => (
+						<Card key={work.id}>
+							<CardHeader>
+								<div className="flex justify-between items-start">
+									<CardTitle className="text-lg">
+										{work.patient.name} - {work.prosthesisType.name}
+									</CardTitle>
+									<Badge variant={work.isCompleted ? "default" : "secondary"}>
+										{work.isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+									</Badge>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+									<div>
+										<span className="font-medium">Doktor:</span> {work.dentist?.user?.name || "-"}
+									</div>
+									<div>
+										<span className="font-medium">Şube:</span> {work.dentist?.clinic?.name || "-"}
+									</div>
+									<div>
+										<span className="font-medium">Teslim Tarihi:</span>{" "}
+										{work.deliveryDate 
+											? format(new Date(work.deliveryDate), "dd MMM yyyy", { locale: tr }) 
+											: "-"}
+									</div>
+									<div>
+										<span className="font-medium">Aşama:</span> {work.prosthesisStage?.name || "Belirtilmedi"}
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					))
+				)}
+			</div>
+
+			{/* Pagination */}
+			{pagination && pagination.totalPages > 1 && (
+				<div className="flex justify-center gap-2 mt-8">
+					<Button 
+						disabled={page === 1} 
+						onClick={() => setPage(page - 1)}
+					>
+						Önceki Sayfa
+					</Button>
+					<span className="py-2 px-4 border rounded-md">
+						Sayfa {page} / {pagination.totalPages}
+					</span>
+					<Button 
+						disabled={page === pagination.totalPages} 
+						onClick={() => setPage(page + 1)}
+					>
+						Sonraki Sayfa
+					</Button>
+				</div>
+			)}
+		</div>
+	);
 }
-
-export default page
