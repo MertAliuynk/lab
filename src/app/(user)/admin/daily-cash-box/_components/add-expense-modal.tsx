@@ -30,7 +30,7 @@ const formSchema = z.object({
 		.refine((val) => !Number.isNaN(Number(val)) && Number(val) > 0, {
 			message: "Geçerli bir miktar giriniz",
 		}),
-	description: z.string().min(1, "Açıklama gereklidir"),
+	description: z.string(),
 	paymentType: z.enum(["CASH", "CREDIT_CARD", "BANK_TRANSFER"]),
 	expenseTypeId: z.string(),
 });
