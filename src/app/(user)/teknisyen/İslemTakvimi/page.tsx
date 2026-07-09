@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,42 +11,32 @@ import { tr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 export default function DeliveryListPage() {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [clinicId, setClinicId] = useState<string>("");
   const [dentistId, setDentistId] = useState<string>("");
   const [page, setPage] = useState(1);
 
-  // Client tarafında render edildiğinden emin olalım (Hydration hatasını engeller)
-  useEffect(() => {
-    setSelectedDate(new Date());
-  }, []);
-
   const { data: clinics } = api.admin.clinic.getAll.useQuery({});
   const { data: dentists } = api.admin.dentist.getAll.useQuery({});
 
-  const { data: result, isLoading } = api.laboratoryTechnician.dentalWork.getByDeliveryDate.useQuery(
-    {
-      date: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
-      clinicId: clinicId || undefined,
-      dentistId: dentistId || undefined,
-      page: page,
-      perPage: 20,
-    },
-    { enabled: !!selectedDate } // Tarih hazır olana kadar sorguyu çalıştırma
-  );
+  // DÜZELTME: date parametresine .toISOString() yerine doğrudan Date nesnesi gönderiliyor
+  const { data: result, isLoading } = api.laboratoryTechnician.dentalWork.getByDeliveryDate.useQuery({
+    date: selectedDate, 
+    clinicId: clinicId || undefined,
+    dentistId: dentistId || undefined,
+    page: page,
+    perPage: 20,
+  });
 
   const dentalWorks = result?.dentalWorks ?? [];
   const pagination = result?.pagination;
 
   const changeDate = (days: number) => {
-    if (!selectedDate) return;
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + days);
     setSelectedDate(newDate);
     setPage(1);
   };
-
-  if (!selectedDate) return null; // Yükleme sırasında boş render
 
   return (
     <div className="container mx-auto py-6">
@@ -73,7 +63,7 @@ export default function DeliveryListPage() {
 
       <div className="flex gap-4 mb-6">
         <div className="w-64">
-          <Select value={clinicId} onValueChange={(val) => { setClinicId(val); setPage(1); }}>
+          <Select value={clinicId} onValueChange={(val) => { setClinicId(val === "all" ? "" : val); setPage(1); }}>
             <SelectTrigger>
               <SelectValue placeholder="Tüm Şubeler" />
             </SelectTrigger>
@@ -86,7 +76,7 @@ export default function DeliveryListPage() {
           </Select>
         </div>
         <div className="w-64">
-          <Select value={dentistId} onValueChange={(val) => { setDentistId(val); setPage(1); }}>
+          <Select value={dentistId} onValueChange={(val) => { setDentistId(val === "all" ? "" : val); setPage(1); }}>
             <SelectTrigger>
               <SelectValue placeholder="Tüm Doktorlar" />
             </SelectTrigger>
@@ -128,14 +118,6 @@ export default function DeliveryListPage() {
           ))
         )}
       </div>
-
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-8">
-          <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Önceki</Button>
-          <span className="py-2 px-4 border rounded-md">Sayfa {page} / {pagination.totalPages}</span>
-          <Button disabled={page === pagination.totalPages} onClick={() => setPage(page + 1)}>Sonraki</Button>
-        </div>
-      )}
     </div>
   );
 }
