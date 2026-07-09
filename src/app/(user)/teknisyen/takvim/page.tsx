@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +135,13 @@ export default function DeliveryListPage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">
-                    {work.patient?.name ?? "İsimsiz"} - {work.prosthesisType?.name ?? "-"}
+                    <Link 
+                      href={`/teknisyen/hastalarim/${work.patient?.id}`} 
+                      className="hover:underline text-blue-600 transition-colors"
+                    >
+                      {work.patient?.name ?? "İsimsiz"}
+                    </Link>
+                    {" - " + (work.prosthesisType?.name ?? "-")}
                   </CardTitle>
                   <Badge variant={work.isCompleted ? "default" : "secondary"}>
                     {work.isCompleted ? "Tamamlandı" : "Devam Ediyor"}
