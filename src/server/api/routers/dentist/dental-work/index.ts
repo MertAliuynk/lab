@@ -1,7 +1,7 @@
 import { createTRPCRouter, dentistProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { sendNewPatientNotificationToTechnician } from "@/lib/notifications";
-import { formatDateTime, formatDeliveryDateNote } from "@/lib/format";
+import { DELIVERY_DATE_NOTE_PREFIX, formatDateTime, formatDeliveryDateNote } from "@/lib/format";
 import type { NewPatientNotification } from "@/types/socket";
 import {
 	createDentalWorkSchema,
@@ -611,8 +611,9 @@ export const dentalWorkRouter = createTRPCRouter({
 			});
 		}
 
+		// Teslim tarihi değişikliği kayıtları gerçek bir aşama olmadığı için "en son aşama" sayılmaz
 		const latestEntry = await ctx.db.stageHistory.findFirst({
-			where: { dentalWorkId: stageHistory.dentalWorkId },
+			where: { dentalWorkId: stageHistory.dentalWorkId, notes: { not: { startsWith: DELIVERY_DATE_NOTE_PREFIX } } },
 			orderBy: { createdAt: "desc" },
 		});
 
@@ -628,7 +629,7 @@ export const dentalWorkRouter = createTRPCRouter({
 		});
 
 		const previousEntry = await ctx.db.stageHistory.findFirst({
-			where: { dentalWorkId: stageHistory.dentalWorkId },
+			where: { dentalWorkId: stageHistory.dentalWorkId, notes: { not: { startsWith: DELIVERY_DATE_NOTE_PREFIX } } },
 			orderBy: { createdAt: "desc" },
 		});
 

@@ -1,5 +1,6 @@
 import { createTRPCRouter, laboratoryTechnicianProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { DELIVERY_DATE_NOTE_PREFIX, formatDeliveryDateNote } from "@/lib/format";
 import {
 	getAllDentalWorksSchema,
 	getDentalWorkByIdSchema,
@@ -12,6 +13,7 @@ import {
 	createProsthesisSchema,
 	deleteProsthesisSchema,
 	deleteTechnicianStageHistorySchema,
+	updateDeliveryDateSchema,
 	getDentalWorksByDeliveryDateSchema
 } from "./schema";
 
@@ -412,8 +414,9 @@ export const dentalWorkRouter = createTRPCRouter({
 				});
 			}
 
+			// Teslim tarihi değişikliği kayıtları gerçek bir aşama olmadığı için "en son aşama" sayılmaz
 			const latestEntry = await ctx.db.technicianStageHistory.findFirst({
-				where: { dentalWorkId: technicianStageHistory.dentalWorkId },
+				where: { dentalWorkId: technicianStageHistory.dentalWorkId, notes: { not: { startsWith: DELIVERY_DATE_NOTE_PREFIX } } },
 				orderBy: { createdAt: "desc" },
 			});
 
@@ -429,7 +432,7 @@ export const dentalWorkRouter = createTRPCRouter({
 			});
 
 			const previousEntry = await ctx.db.technicianStageHistory.findFirst({
-				where: { dentalWorkId: technicianStageHistory.dentalWorkId },
+				where: { dentalWorkId: technicianStageHistory.dentalWorkId, notes: { not: { startsWith: DELIVERY_DATE_NOTE_PREFIX } } },
 				orderBy: { createdAt: "desc" },
 			});
 
@@ -447,6 +450,42 @@ export const dentalWorkRouter = createTRPCRouter({
 					KURYE_NOTES.includes(dentalWork.notes)
 						? { notes: null }
 						: {}),
+				},
+			});
+
+			return { success: true };
+		}),
+
+	updateDeliveryDate: laboratoryTechnicianProcedure
+		.input(updateDeliveryDateSchema)
+		.mutation(async ({ ctx, input }) => {
+			const dentalWork = await ctx.db.dentalWork.findFirst({
+				where: {
+					id: input.dentalWorkId,
+					isDeleted: false,
+				},
+			});
+
+			if (!dentalWork) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Diş çalışması bulunamadı",
+				});
+			}
+
+			await ctx.db.dentalWork.update({
+				where: { id: input.dentalWorkId },
+				data: {
+					deliveryDate: input.deliveryDate,
+				},
+			});
+
+			await ctx.db.technicianStageHistory.create({
+				data: {
+					dentalWorkId: input.dentalWorkId,
+					technicianStageId: null,
+					notes: formatDeliveryDateNote(input.deliveryDate),
+					laboratoryTechnicianId: ctx.laboratoryTechnician.id,
 				},
 			});
 

@@ -448,6 +448,7 @@ export default async function page({ params }: PageProps) {
 
 												{/* Teslim Tarihi Güncelleme */}
 												<UpdateDeliveryDateForm
+													role="dentist"
 													dentalWorkId={latestWork.id}
 													currentDeliveryDate={latestWork.deliveryDate}
 												/>
@@ -687,8 +688,9 @@ const CombinedStageHistorySection = async ({ works }: { works: DentalWork[] }) =
 			.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 		// Doktor sadece kendi eklediği en son doktor aşamasını geri alabilir
+		// (teslim tarihi değişikliği kayıtları gerçek bir aşama olmadığı için hariç tutulur)
 		const latestProsthesisEntryId = allHistory
-			.filter((h: any) => h.type === "prosthesis")
+			.filter((h: any) => h.type === "prosthesis" && !parseDeliveryDateNote(h.notes))
 			.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.id;
 
 		if (allHistory.length === 0) {

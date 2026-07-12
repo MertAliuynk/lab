@@ -7,6 +7,7 @@ import AttachmentGallery from "@/components/attachment-gallery";
 import DashboardHeader from "@/components/dashboard-header";
 import DeleteStageHistoryButton from "@/components/delete-stage-history-button";
 import PatientNotesList from "@/components/patient-notes-list";
+import UpdateDeliveryDateForm from "@/components/update-delivery-date-form";
 import UpdateTechnicianStageForm from "@/components/update-technician-stage-form";
 import {
 	AlertDialog,
@@ -543,6 +544,14 @@ export default function page() {
 														/>
 													)}
 												</LatestStageInfoProvider>
+
+												{/* Teslim Tarihi Güncelleme */}
+												<UpdateDeliveryDateForm
+													role="technician"
+													dentalWorkId={latestWork.id}
+													currentDeliveryDate={latestWork.deliveryDate}
+												/>
+
 												{/* Ek Tedaviler Alanı - Aşama güncelleme altı */}
 												<AdditionalTreatmentListReadonly treatments={allAdditionalTreatments} hidePrices={true} />
 												<div className="flex justify-between items-start">
@@ -800,7 +809,9 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 	// Teknisyen sadece kendi eklediği en son teknisyen aşamasını geri alabilir
+	// (teslim tarihi değişikliği kayıtları gerçek bir aşama olmadığı için hariç tutulur)
 	const latestTechnicianEntryId = technicianHistory
+		.filter((item: any) => !parseDeliveryDateNote(item.notes))
 		.slice()
 		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.id;
 

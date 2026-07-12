@@ -12,12 +12,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 type UpdateDeliveryDateFormProps = {
+	role: "dentist" | "technician";
 	dentalWorkId: string;
 	currentDeliveryDate?: Date | null;
 	onSuccess?: () => void;
 };
 
 export default function UpdateDeliveryDateForm({
+	role,
 	dentalWorkId,
 	currentDeliveryDate,
 	onSuccess,
@@ -28,7 +30,7 @@ export default function UpdateDeliveryDateForm({
 	const router = useRouter();
 	const utils = api.useUtils();
 
-	const updateDeliveryDateMutation = api.dentist.dentalWork.updateDeliveryDate.useMutation({
+	const dentistMutation = api.dentist.dentalWork.updateDeliveryDate.useMutation({
 		onSuccess: async () => {
 			toast.success("Teslim tarihi başarıyla güncellendi!");
 
@@ -43,16 +45,30 @@ export default function UpdateDeliveryDateForm({
 		},
 	});
 
+	const technicianMutation = api.laboratoryTechnician.dentalWork.updateDeliveryDate.useMutation({
+		onSuccess: () => {
+			toast.success("Teslim tarihi başarıyla güncellendi!");
+			onSuccess?.();
+			window.location.reload();
+		},
+		onError: (error: { message?: string }) => {
+			toast.error(error.message || "Teslim tarihi güncellenirken hata oluştu!");
+		},
+	});
+
+	const isPending = role === "dentist" ? dentistMutation.isPending : technicianMutation.isPending;
+
 	const handleUpdate = () => {
 		if (!deliveryDate) {
 			toast.error("Lütfen teslim tarihi seçin!");
 			return;
 		}
 
-		updateDeliveryDateMutation.mutate({
-			dentalWorkId,
-			deliveryDate: new Date(deliveryDate),
-		});
+		if (role === "dentist") {
+			dentistMutation.mutate({ dentalWorkId, deliveryDate: new Date(deliveryDate) });
+		} else {
+			technicianMutation.mutate({ dentalWorkId, deliveryDate: new Date(deliveryDate) });
+		}
 	};
 
 	return (
@@ -74,13 +90,9 @@ export default function UpdateDeliveryDateForm({
 					/>
 				</div>
 
-				<Button
-					onClick={handleUpdate}
-					disabled={updateDeliveryDateMutation.isPending || !deliveryDate}
-					className="w-full"
-				>
+				<Button onClick={handleUpdate} disabled={isPending || !deliveryDate} className="w-full">
 					<Save className="w-4 h-4 mr-2" />
-					{updateDeliveryDateMutation.isPending ? "Güncelleniyor..." : "Teslim Tarihini Güncelle"}
+					{isPending ? "Güncelleniyor..." : "Teslim Tarihini Güncelle"}
 				</Button>
 			</CardContent>
 		</Card>
