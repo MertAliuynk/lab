@@ -168,7 +168,7 @@ export default function DeliveryListPage() {
                   <div><span className="font-medium">Şube:</span> {work.dentist?.clinic?.name || "-"}</div>
                   <div>
                     <span className="font-medium">Teslim Tarihi:</span>{" "}
-                    {work.deliveryDate ? format(new Date(work.deliveryDate), "dd MMM yyyy", { locale: tr }) : "-"}
+                    {work.deliveryDate ? format(new Date(work.deliveryDate), "dd MMM yyyy HH:mm", { locale: tr }) : "-"}
                   </div>
                   <div><span className="font-medium">Aşama:</span> {work.prosthesisStage?.name || "-"}</div>
                 </div>

@@ -24,13 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, parseDeliveryDateNote } from "@/lib/format";
 import { api } from "@/trpc/react";
 import type { RouterOutputs } from "@/trpc/react";
 import {
 	AlertCircle,
 	ArrowLeft,
 	Calendar,
+	CalendarClock,
 	CheckCircle2,
 	Clock,
 	FileText,
@@ -604,6 +605,16 @@ export default function page() {
 														<span className="font-medium">İşlem Sayısı:</span>
 														<span className="text-muted-foreground">{group.works.length} adet</span>
 													</div>
+
+													{latestWork.deliveryDate && (
+														<div className="flex items-center space-x-2">
+															<CalendarClock className="w-4 h-4 text-muted-foreground" />
+															<span className="font-medium">Teslim Tarihi:</span>
+															<span className="text-muted-foreground">
+																{formatDateTime(latestWork.deliveryDate)}
+															</span>
+														</div>
+													)}
 												</div>
 
 												{group.notes.length > 0 && (
@@ -726,10 +737,13 @@ function LatestStageInfoProvider({
 	);
 
 	// Combine and sort all history to find the latest stage
+	// Teslim tarihi değişikliği kayıtları gerçek bir aşama olmadığı için hariç tutulur
 	const allHistory = [
 		...prosthesisHistory.map((item: any) => ({ ...item, type: 'prosthesis' as const })),
 		...technicianHistory.map((item: any) => ({ ...item, type: 'technician' as const }))
-	].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+	]
+		.filter((item: any) => !parseDeliveryDateNote(item.notes))
+		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 	// Get the most recent stage
 	const latestStageInfo = (() => {
@@ -842,32 +856,42 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 					const isBitimRecord = history.notes === "BITIM_YAPILDI";
 					// Kuryeye verildi notları (sunucuda farklı stringler olabilir)
 					const isKuryeRecord = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI", "TEKRAR_DOKTORA_VERILDI"].includes(String(history.notes));
+					const deliveryDateChange = parseDeliveryDateNote(history.notes);
+					const isDeliveryDateRecord = !!deliveryDateChange;
 
 					const stageName = isBitimRecord
 						? "Bitim Yapıldı"
 						: isKuryeRecord
 							? "Kuryeye Verildi"
-							: (isProsthesis ? history.prosthesisStage?.name : history.technicianStage?.name);
+							: isDeliveryDateRecord
+								? "Teslim Tarihi Değiştirildi"
+								: (isProsthesis ? history.prosthesisStage?.name : history.technicianStage?.name);
 
 					const bgColorClass = isBitimRecord
 						? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
 						: isKuryeRecord
 							? "bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200"
-							: (isProsthesis
-								? "bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200"
-								: "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200");
+							: isDeliveryDateRecord
+								? "bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200"
+								: (isProsthesis
+									? "bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200"
+									: "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200");
 
 					const iconColorClass = isBitimRecord
 						? "border-green-500 bg-green-100"
 						: isKuryeRecord
 							? "border-cyan-500 bg-cyan-100"
-							: (isProsthesis ? "border-blue-500 bg-blue-100" : "border-orange-500 bg-orange-100");
+							: isDeliveryDateRecord
+								? "border-violet-500 bg-violet-100"
+								: (isProsthesis ? "border-blue-500 bg-blue-100" : "border-orange-500 bg-orange-100");
 
 					const iconClass = isBitimRecord
 						? "text-green-600"
 						: isKuryeRecord
 							? "text-cyan-600"
-							: (isProsthesis ? "text-blue-600" : "text-orange-600");
+							: isDeliveryDateRecord
+								? "text-violet-600"
+								: (isProsthesis ? "text-blue-600" : "text-orange-600");
 					
 					return (
 						<div key={`${history.type}-${history.id}`} className="relative">
@@ -895,9 +919,13 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 													{stageName}
 												</Badge>
 												<Badge variant="outline" className="text-xs">
-													{isBitimRecord 
-														? 'Bitim Kaydı' 
-														: (isProsthesis ? 'Doktor Aşaması' : 'Teknisyen Aşaması')
+													{isBitimRecord
+														? 'Bitim Kaydı'
+														: isKuryeRecord
+															? 'Kurye Kaydı'
+															: isDeliveryDateRecord
+																? 'Teslim Tarihi Kaydı'
+																: (isProsthesis ? 'Doktor Aşaması' : 'Teknisyen Aşaması')
 													}
 												</Badge>
 											</div>
@@ -924,7 +952,8 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 									{history.notes &&
 										history.notes !== "BITIM_YAPILDI" &&
 										history.notes !== "KURYEE_VERILDI" &&
-										history.notes !== "TEKRAR_DOKTORA_VERILDI" && (
+										history.notes !== "TEKRAR_DOKTORA_VERILDI" &&
+										!isDeliveryDateRecord && (
 											<div className="mt-2">
 												<div className="flex items-center text-xs text-muted-foreground mb-1">
 													<FileText className="w-3 h-3 mr-1" />
@@ -934,6 +963,17 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 											</div>
 									)}
 
+									{isDeliveryDateRecord && (
+										<div className="mt-2">
+											<div className="flex items-center text-xs text-muted-foreground mb-1">
+												<CalendarClock className="w-3 h-3 mr-1 text-violet-600" />
+												<span>Durum</span>
+											</div>
+											<p className="text-xs bg-violet-50 p-2 rounded border border-violet-200 text-violet-700">
+												Teslim tarihi {formatDateTime(deliveryDateChange as Date)} olarak değiştirildi
+											</p>
+										</div>
+									)}
 
 									{isBitimRecord && (
 										<div className="mt-2">

@@ -20,15 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 import { RefreshCw, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import FileUploadArea, { type FileUploadAreaRef } from "./file-upload-area";
-
-type UploadedFile = {
-	url: string;
-	name: string;
-	type: "image" | "video";
-};
 
 type UpdateStageFormProps = {
 	dentalWorkId: string;
@@ -47,8 +40,6 @@ export default function UpdateStageForm({
 }: UpdateStageFormProps) {
 	const [selectedStageId, setSelectedStageId] = useState<string>("");
 	const [notes, setNotes] = useState<string>("");
-	const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-	const fileUploadRef = useRef<FileUploadAreaRef>(null);
 	const router = useRouter();
 	const utils = api.useUtils();
 
@@ -60,8 +51,6 @@ export default function UpdateStageForm({
 					toast.success("Aşama başarıyla güncellendi!");
 					setSelectedStageId("");
 					setNotes("");
-					setUploadedFiles([]);
-					fileUploadRef.current?.clearFiles();
 
 					await utils.admin.dentalWork.getByPatientId.invalidate();
 					await utils.admin.dentalWork.getStageHistory.invalidate();
@@ -79,8 +68,6 @@ export default function UpdateStageForm({
 					toast.success("Aşama başarıyla güncellendi!");
 					setSelectedStageId("");
 					setNotes("");
-					setUploadedFiles([]);
-					fileUploadRef.current?.clearFiles();
 
 					await utils.dentist.dentalWork.getByPatientId.invalidate();
 					await utils.dentist.dentalWork.getStageHistory.invalidate();
@@ -109,7 +96,6 @@ export default function UpdateStageForm({
 			dentalWorkId,
 			prosthesisStageId: selectedStageId,
 			notes: notes || undefined,
-			attachments: uploadedFiles.length > 0 ? uploadedFiles : undefined,
 		});
 	};
 
@@ -122,10 +108,6 @@ export default function UpdateStageForm({
 
 	const handleStageChange = (value: string | string[] | number | number[]) => {
 		setSelectedStageId(value as string);
-	};
-
-	const handleFilesChange = (files: UploadedFile[]) => {
-		setUploadedFiles(files);
 	};
 
 	return (
@@ -170,11 +152,6 @@ export default function UpdateStageForm({
 						onChange={(e) => setNotes(e.target.value)}
 						rows={3}
 					/>
-				</div>
-
-				<div className="space-y-2">
-					<Label>Dosyalar (Opsiyonel)</Label>
-					<FileUploadArea ref={fileUploadRef} onFilesChange={handleFilesChange} />
 				</div>
 
 				<AlertDialog>

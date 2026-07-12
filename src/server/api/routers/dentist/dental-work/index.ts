@@ -1,6 +1,7 @@
 import { createTRPCRouter, dentistProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { sendNewPatientNotificationToTechnician } from "@/lib/notifications";
+import { formatDateTime, formatDeliveryDateNote } from "@/lib/format";
 import type { NewPatientNotification } from "@/types/socket";
 import {
 	createDentalWorkSchema,
@@ -14,6 +15,7 @@ import {
 	getTechnicianStageHistorySchema,
 	updateDentalWorkSchema,
 	updateDentalWorkStageSchema,
+	updateDeliveryDateSchema,
 } from "./schema";
 
 export const dentalWorkRouter = createTRPCRouter({
@@ -636,6 +638,103 @@ export const dentalWorkRouter = createTRPCRouter({
 				prosthesisStageId: previousEntry?.prosthesisStageId ?? null,
 			},
 		});
+
+		return { success: true };
+	}),
+
+	updateDeliveryDate: dentistProcedure.input(updateDeliveryDateSchema).mutation(async ({ ctx, input }) => {
+		const dentalWork = await ctx.db.dentalWork.findFirst({
+			where: {
+				id: input.dentalWorkId,
+				dentistId: ctx.dentist!.id,
+			},
+			include: {
+				patient: true,
+				prosthesisType: true,
+			},
+		});
+
+		if (!dentalWork) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Diş çalışması bulunamadı",
+			});
+		}
+
+		await ctx.db.dentalWork.update({
+			where: { id: input.dentalWorkId },
+			data: {
+				deliveryDate: input.deliveryDate,
+			},
+		});
+
+		await ctx.db.stageHistory.create({
+			data: {
+				dentalWorkId: input.dentalWorkId,
+				prosthesisStageId: null,
+				notes: formatDeliveryDateNote(input.deliveryDate),
+				dentistId: ctx.dentist!.id,
+			},
+		});
+
+		// Teknisyenlere teslim tarihi değişikliği bildirimi gönder
+		const dentist = await ctx.db.dentist.findUnique({
+			where: { id: ctx.dentist!.id },
+			include: { clinic: true, user: true },
+		});
+
+		const allTechnicians = await ctx.db.laboratoryTechnician.findMany({
+			where: { isDeleted: false },
+			include: { user: true },
+		});
+
+		if (dentist && allTechnicians.length > 0) {
+			const savedNotification = await ctx.db.notification.create({
+				data: {
+					patientName: dentalWork.patient.name,
+					patientId: dentalWork.patient.id,
+					prosthesisType: dentalWork.prosthesisType.name,
+					newStage: `Teslim Tarihi: ${formatDateTime(input.deliveryDate)}`,
+					dentistName: dentist.user?.name || dentist.title || "Hekim",
+					clinicName: dentist.clinic.name,
+					dentalWorkId: dentalWork.id,
+				},
+			});
+
+			const notificationReadsData = allTechnicians.map((technician) => ({
+				notificationId: savedNotification.id,
+				userId: technician.userId,
+				isRead: false,
+			}));
+
+			await ctx.db.notificationRead.createMany({
+				data: notificationReadsData,
+			});
+
+			for (const technician of allTechnicians) {
+				const notification = {
+					id: savedNotification.id,
+					patientName: dentalWork.patient.name,
+					patientId: dentalWork.patient.id,
+					prosthesisType: dentalWork.prosthesisType.name,
+					newStage: `Teslim Tarihi: ${formatDateTime(input.deliveryDate)}`,
+					dentistName: dentist.user?.name || dentist.title || "Hekim",
+					clinicName: dentist.clinic.name,
+					laboratoryTechnicianId: technician.userId,
+					dentalWorkId: dentalWork.id,
+					timestamp: savedNotification.createdAt,
+					type: "prosthesisUpdate",
+				};
+
+				try {
+					await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/notifications/send`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(notification),
+					});
+				} catch {}
+			}
+		}
 
 		return { success: true };
 	}),

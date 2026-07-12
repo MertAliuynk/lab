@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { toDatetimeLocalValue } from "@/lib/format";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -333,12 +334,12 @@ export default function AddProsthesisSheet() {
 							name="deliveryDate"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>İş Teslim Tarihi</FormLabel>
+									<FormLabel>İş Teslim Tarihi ve Saati</FormLabel>
 									<FormControl>
 										<Input
-											type="date"
+											type="datetime-local"
 											onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
-											value={field.value ? field.value.toISOString().split('T')[0] : ""}
+											value={field.value ? toDatetimeLocalValue(field.value) : ""}
 										/>
 									</FormControl>
 									<FormMessage />

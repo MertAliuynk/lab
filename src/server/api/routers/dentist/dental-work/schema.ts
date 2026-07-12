@@ -95,6 +95,11 @@ export const deleteDentalWorkSchema = z.object({
 	id: z.string(),
 });
 
+export const updateDeliveryDateSchema = z.object({
+	dentalWorkId: z.string(),
+	deliveryDate: z.date(),
+});
+
 export const deleteStageHistorySchema = z.object({
 	stageHistoryId: z.string(),
 });

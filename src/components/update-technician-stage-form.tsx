@@ -20,15 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 import { RefreshCw, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import FileUploadArea, { type FileUploadAreaRef } from "./file-upload-area";
-
-type UploadedFile = {
-	url: string;
-	name: string;
-	type: "image" | "video";
-};
 
 type UpdateTechnicianStageFormProps = {
 	dentalWorkId: string;
@@ -51,8 +44,6 @@ export default function UpdateTechnicianStageForm({
 }: UpdateTechnicianStageFormProps) {
 	const [selectedStageId, setSelectedStageId] = useState<string>("");
 	const [notes, setNotes] = useState<string>("");
-	const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-	const fileUploadRef = useRef<FileUploadAreaRef>(null);
 	const router = useRouter();
 	const utils = api.useUtils();
 
@@ -64,8 +55,6 @@ export default function UpdateTechnicianStageForm({
 			toast.success("Teknisyen aşaması başarıyla güncellendi!");
 			setSelectedStageId("");
 			setNotes("");
-			setUploadedFiles([]);
-			fileUploadRef.current?.clearFiles();
 
 			// Cache'leri invalidate et
 			await utils.laboratoryTechnician.patient.getAll.invalidate();
@@ -92,12 +81,7 @@ export default function UpdateTechnicianStageForm({
 			dentalWorkId,
 			technicianStageId: selectedStageId,
 			notes: notes || undefined,
-			attachments: uploadedFiles.length > 0 ? uploadedFiles : undefined,
 		});
-	};
-
-	const handleFileUpload = (files: UploadedFile[]) => {
-		setUploadedFiles(files);
 	};
 
 	const handleStageChange = (value: string | number | string[] | number[]) => {
@@ -165,11 +149,6 @@ export default function UpdateTechnicianStageForm({
 						onChange={(e) => setNotes(e.target.value)}
 						rows={3}
 					/>
-				</div>
-
-				<div className="space-y-2">
-					<Label>Dosya Ekle (İsteğe bağlı)</Label>
-					<FileUploadArea ref={fileUploadRef} onFilesChange={handleFileUpload} />
 				</div>
 
 				<AlertDialog>
