@@ -131,19 +131,33 @@ export default function DeliveryListPage() {
           </Card>
         ) : (
           dentalWorks.map((work: any) => (
-            <Card key={work.id}>
+            <Card
+              key={work.id}
+              className={
+                work.isCompleted
+                  ? "border-2 border-gray-500 bg-gray-100"
+                  : "border-2 border-orange-300 bg-orange-50/50"
+              }
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">
-                    <Link 
-                      href={`/teknisyen/hastalarim/${work.patient?.id}`} 
+                    <Link
+                      href={`/teknisyen/hastalarim/${work.patient?.id}`}
                       className="hover:underline text-blue-600 transition-colors"
                     >
                       {work.patient?.name ?? "İsimsiz"}
                     </Link>
                     {" - " + (work.prosthesisType?.name ?? "-")}
                   </CardTitle>
-                  <Badge variant={work.isCompleted ? "default" : "secondary"}>
+                  <Badge
+                    variant="outline"
+                    className={
+                      work.isCompleted
+                        ? "border-gray-400 text-gray-700 bg-gray-50"
+                        : "border-orange-200 text-orange-700 bg-orange-50"
+                    }
+                  >
                     {work.isCompleted ? "Tamamlandı" : "Devam Ediyor"}
                   </Badge>
                 </div>

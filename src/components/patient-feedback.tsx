@@ -53,6 +53,7 @@ export default function PatientFeedback({
 			
 			// Cache'leri invalidate et
 			await utils.dentist.feedback.getByPatient.invalidate();
+			await utils.dentist.patient.getMy.invalidate();
 			onSuccess?.();
 		},
 		onError: (error) => {

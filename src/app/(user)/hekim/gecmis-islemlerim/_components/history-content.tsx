@@ -5,7 +5,8 @@ import type { RouterOutputs } from "@/trpc/react";
 import { api } from "@/trpc/server";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar, CheckCircle2, Clock, FileText, MapPin, Palette, User } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, MapPin, Palette, User } from "lucide-react";
+import Link from "next/link";
 import { EmptyState } from "./empty-state";
 import { HistoryPagination } from "./history-pagination";
 
@@ -88,22 +89,20 @@ export async function HistoryContent({ searchParams }: HistoryContentProps) {
 			});
 		}
 
-		if (searchParams.sort) {
-			filteredWorks.sort((a, b) => {
-				switch (searchParams.sort) {
-					case "createdAt-asc":
-						return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-					case "createdAt-desc":
-						return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-					case "patient-asc":
-						return a.patient.name.localeCompare(b.patient.name, "tr");
-					case "patient-desc":
-						return b.patient.name.localeCompare(a.patient.name, "tr");
-					default:
-						return 0;
-				}
-			});
-		}
+		// Arama/filtre yapılmadığında varsayılan olarak hasta ismine göre alfabetik sırala
+		const sort = searchParams.sort || "patient-asc";
+		filteredWorks.sort((a, b) => {
+			switch (sort) {
+				case "createdAt-asc":
+					return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+				case "createdAt-desc":
+					return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+				case "patient-desc":
+					return b.patient.name.localeCompare(a.patient.name, "tr");
+				default:
+					return a.patient.name.localeCompare(b.patient.name, "tr");
+			}
+		});
 
 		const totalPages = Math.ceil(filteredWorks.length / perPage);
 		const currentPageWorks = filteredWorks.slice((page - 1) * perPage, page * perPage);
@@ -168,7 +167,8 @@ function DentalWorkListItem({ work }: { work: DentalWork }) {
 	}
 
 	return (
-		<Card className="hover:shadow-sm transition-shadow">
+		<Link href={`/hekim/hasta/${work.patient.id}`} className="block">
+		<Card className="hover:shadow-sm transition-shadow cursor-pointer">
 			<CardContent className="p-4 sm:p-6">
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					{/* Hasta ve Protez Bilgileri */}
@@ -232,16 +232,8 @@ function DentalWorkListItem({ work }: { work: DentalWork }) {
 						</div>
 					</div>
 				</div>
-
-				{work.notes && !["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI", "BITIM_YAPILDI"].includes(work.notes) && (
-					<div className="mt-4 pt-4 border-t">
-						<div className="flex items-start gap-2 text-sm">
-							<FileText className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-							<p className="text-gray-600 break-words">{work.notes}</p>
-						</div>
-					</div>
-				)}
 			</CardContent>
 		</Card>
+		</Link>
 	);
 }

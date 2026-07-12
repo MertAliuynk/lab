@@ -61,7 +61,7 @@ export function HistoryFilters({ searchParams }: HistoryFiltersProps) {
 
 	const [sort, setSort] = useQueryState(
 		"sort",
-		parseAsString.withDefault("createdAt-desc").withOptions({ shallow: false }),
+		parseAsString.withDefault("patient-asc").withOptions({ shallow: false }),
 	);
 	const [_page, setPage] = useQueryState("page", parseAsInteger.withDefault(1).withOptions({ shallow: false }));
 
@@ -107,7 +107,7 @@ export function HistoryFilters({ searchParams }: HistoryFiltersProps) {
 		void setStatus("all");
 		void setStartDate("");
 		void setEndDate("");
-		void setSort("createdAt-desc");
+		void setSort("patient-asc");
 		void setPage(1);
 	};
 

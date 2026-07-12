@@ -22,7 +22,7 @@ export const checkDebtSchema = z.object({
 
 export const createExpenseSchema = z.object({
 	amount: z.number().positive("Miktar pozitif olmalıdır"),
-	description: z.string().min(1, "Açıklama gereklidir"),
+	description: z.string().optional(),
 	date: z.date(),
 	paymentType: z.enum(["BANK_TRANSFER", "CREDIT_CARD", "CASH"]).default("CASH"),
 	expenseTypeId: z.string().min(1, "Gider türü gereklidir"),

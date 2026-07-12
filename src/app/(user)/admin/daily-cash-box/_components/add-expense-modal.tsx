@@ -120,7 +120,7 @@ export default function AddExpenseModal({ isOpen, onClose, selectedDate, onSucce
 							name="description"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Açıklama *</FormLabel>
+									<FormLabel>Açıklama (Opsiyonel)</FormLabel>
 									<FormControl>
 										<Textarea placeholder="Gider açıklaması..." {...field} />
 									</FormControl>

@@ -287,7 +287,7 @@ export const dailyCashBoxRouter = createTRPCRouter({
 		const expense = await ctx.db.expense.create({
 			data: {
 				amount: input.amount,
-				description: input.description,
+				description: input.description || "",
 				date: input.date,
 				paymentType: input.paymentType,
 				createdById: ctx.session?.user?.id || "",
