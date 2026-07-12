@@ -1,6 +1,6 @@
 
 import { createTRPCRouter, dentistProcedure } from "@/server/api/trpc";
-import { getMyPatientsSchema, getPatientByIdSchema, updatePatientNotesSchema, markAsCompletedSchema, sendToTechnicianSchema } from "./schema";
+import { getMyPatientsSchema, getPatientByIdSchema, updatePatientNotesSchema, markAsCompletedSchema, markAsOngoingSchema, sendToTechnicianSchema } from "./schema";
 
 export const patientRouter = createTRPCRouter({
 	sendToTechnician: dentistProcedure.input(sendToTechnicianSchema).mutation(async ({ ctx, input }) => {
@@ -190,6 +190,56 @@ export const patientRouter = createTRPCRouter({
 					dentalWorkId: dentalWork.id,
 					prosthesisStageId: null, // Özel durum: bitim kaydı
 					notes: "BITIM_YAPILDI", // Özel işaretleyici
+					dentistId: ctx.dentist!.id,
+				},
+			});
+		}
+
+		return updatedPatient;
+	}),
+
+	markAsOngoing: dentistProcedure.input(markAsOngoingSchema).mutation(async ({ ctx, input }) => {
+		// Önce hastanın bu doktora ait olduğunu kontrol et
+		const patient = await ctx.db.patient.findFirst({
+			where: {
+				id: input.id,
+				dentistId: ctx.dentist!.id,
+			},
+			include: {
+				dentalWorks: {
+					where: {
+						isDeleted: false,
+					},
+				},
+			},
+		});
+
+		if (!patient) {
+			throw new Error("Hasta bulunamadı veya bu hastaya erişim yetkiniz yok");
+		}
+
+		// Hastayı devam eden duruma al
+		const updatedPatient = await ctx.db.patient.update({
+			where: { id: input.id },
+			data: {
+				isCompleted: false,
+				completedAt: null,
+			},
+		});
+
+		// Bitim kayıtlarını sil ve dental work'leri devam eden duruma al
+		for (const dentalWork of patient.dentalWorks) {
+			await ctx.db.dentalWork.update({
+				where: { id: dentalWork.id },
+				data: {
+					isCompleted: false,
+				},
+			});
+
+			await ctx.db.stageHistory.deleteMany({
+				where: {
+					dentalWorkId: dentalWork.id,
+					notes: "BITIM_YAPILDI",
 					dentistId: ctx.dentist!.id,
 				},
 			});

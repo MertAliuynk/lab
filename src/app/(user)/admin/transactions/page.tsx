@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, CheckCircle2, Clock, FileText, User, Palette, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -13,6 +14,7 @@ import { api } from "@/trpc/react";
 
 export default function TransactionsPage() {
 	const [selectedDentist, setSelectedDentist] = useState("");
+	const [statusFilter, setStatusFilter] = useState<"all" | "ongoing" | "completed">("all");
 
 	// Hekim listesini çek (önce tümünü çek, klinikId'yi ilk dentistten al)
 	const dentistsQuery = api.admin.dentist.getAll.useQuery({ clinicId: undefined, perPage: 100 });
@@ -24,13 +26,30 @@ export default function TransactionsPage() {
 
 	// İşlemleri çek (sadece kendi kliniği)
 	const dentalWorksQuery = api.admin.dentalWork.getAll.useQuery({ clinicId, dentistId: selectedDentist || undefined, perPage: 100 });
-	const dentalWorks = dentalWorksQuery.data || [];
+	const allDentalWorks = dentalWorksQuery.data || [];
+
+	// Durum filtresi (Devam Eden / Tamamlanan)
+	const dentalWorks = allDentalWorks.filter((work: any) => {
+		if (statusFilter === "all") return true;
+		if (statusFilter === "completed") return work.isCompleted === true;
+		return work.isCompleted !== true;
+	});
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-2xl font-bold">İşlemlerim</h1>
-        <div className="w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "ongoing" | "completed")}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tümü</SelectItem>
+              <SelectItem value="ongoing">Devam Edenler</SelectItem>
+              <SelectItem value="completed">Tamamlananlar</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-gray-50 border border-gray-200 shadow-sm">
             <button
               className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-sm ${!selectedDentist ? "bg-primary text-white border-primary ring-2 ring-primary/30" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}

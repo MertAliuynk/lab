@@ -1,5 +1,16 @@
 "use client";
 
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,6 +112,7 @@ export default function UpdateTechnicianStageForm({
 	}));
 
 	const currentStage = technicianStages.find((stage) => stage.id === currentTechnicianStageId);
+	const selectedStage = technicianStages.find((stage) => stage.id === selectedStageId);
 
 	return (
 		<Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
@@ -160,14 +172,29 @@ export default function UpdateTechnicianStageForm({
 					<FileUploadArea ref={fileUploadRef} onFilesChange={handleFileUpload} />
 				</div>
 
-				<Button
-					onClick={handleUpdateTechnicianStage}
-					disabled={!selectedStageId || updateTechnicianStageMutation.isPending}
-					className="w-full bg-orange-600 hover:bg-orange-700"
-				>
-					<Save className="w-4 h-4 mr-2" />
-					{updateTechnicianStageMutation.isPending ? "Güncelleniyor..." : "Teknisyen Aşamasını Güncelle"}
-				</Button>
+				<AlertDialog>
+					<AlertDialogTrigger asChild>
+						<Button
+							disabled={!selectedStageId || updateTechnicianStageMutation.isPending}
+							className="w-full bg-orange-600 hover:bg-orange-700"
+						>
+							<Save className="w-4 h-4 mr-2" />
+							{updateTechnicianStageMutation.isPending ? "Güncelleniyor..." : "Teknisyen Aşamasını Güncelle"}
+						</Button>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Teknisyen Aşamasını Güncelle</AlertDialogTitle>
+							<AlertDialogDescription>
+								Aşamayı <strong>{selectedStage?.name}</strong> olarak güncellemek istediğinizden emin misiniz?
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>İptal</AlertDialogCancel>
+							<AlertDialogAction onClick={handleUpdateTechnicianStage}>Evet, Güncelle</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</CardContent>
 		</Card>
 	);

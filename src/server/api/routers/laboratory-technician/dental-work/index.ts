@@ -1,4 +1,5 @@
 import { createTRPCRouter, laboratoryTechnicianProcedure } from "@/server/api/trpc";
+import { TRPCError } from "@trpc/server";
 import {
 	getAllDentalWorksSchema,
 	getDentalWorkByIdSchema,
@@ -10,8 +11,11 @@ import {
 	getAdditionalTreatmentsSchema,
 	createProsthesisSchema,
 	deleteProsthesisSchema,
+	deleteTechnicianStageHistorySchema,
 	getDentalWorksByDeliveryDateSchema
 } from "./schema";
+
+const KURYE_NOTES = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
 
 export const dentalWorkRouter = createTRPCRouter({
 	getAll: laboratoryTechnicianProcedure.input(getAllDentalWorksSchema).query(async ({ ctx, input }) => {
@@ -154,8 +158,7 @@ export const dentalWorkRouter = createTRPCRouter({
 		// DentalWork'ü güncelle
 
 		// Eğer notlardan biri 'KURYEE_VERILDI', 'KURYE_VERILDI', 'TEKRAR_DOKTORA_VERILDI' ise hem dentalWork hem de technicianStageHistory'ye bu notu yaz
-		const kuryeNotes = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
-		const isKuryeVerildi = input.notes && kuryeNotes.includes(input.notes);
+		const isKuryeVerildi = input.notes && KURYE_NOTES.includes(input.notes);
 
 		await ctx.db.dentalWork.update({
 			where: { id: input.dentalWorkId },
@@ -382,6 +385,68 @@ export const dentalWorkRouter = createTRPCRouter({
 				},
 				data: {
 					isDeleted: true,
+				},
+			});
+
+			return { success: true };
+		}),
+
+	deleteTechnicianStageHistory: laboratoryTechnicianProcedure
+		.input(deleteTechnicianStageHistorySchema)
+		.mutation(async ({ ctx, input }) => {
+			const technicianStageHistory = await ctx.db.technicianStageHistory.findUnique({
+				where: { id: input.technicianStageHistoryId },
+			});
+
+			if (!technicianStageHistory) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Aşama geçmişi bulunamadı",
+				});
+			}
+
+			if (technicianStageHistory.notes === "BITIM_YAPILDI") {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Bitim kaydını geri almak için 'Bitimi Geri Al' butonunu kullanın",
+				});
+			}
+
+			const latestEntry = await ctx.db.technicianStageHistory.findFirst({
+				where: { dentalWorkId: technicianStageHistory.dentalWorkId },
+				orderBy: { createdAt: "desc" },
+			});
+
+			if (!latestEntry || latestEntry.id !== technicianStageHistory.id) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Sadece en son eklenen aşama silinebilir",
+				});
+			}
+
+			await ctx.db.technicianStageHistory.delete({
+				where: { id: input.technicianStageHistoryId },
+			});
+
+			const previousEntry = await ctx.db.technicianStageHistory.findFirst({
+				where: { dentalWorkId: technicianStageHistory.dentalWorkId },
+				orderBy: { createdAt: "desc" },
+			});
+
+			const dentalWork = await ctx.db.dentalWork.findUnique({
+				where: { id: technicianStageHistory.dentalWorkId },
+			});
+
+			await ctx.db.dentalWork.update({
+				where: { id: technicianStageHistory.dentalWorkId },
+				data: {
+					technicianStageId: previousEntry?.technicianStageId ?? null,
+					...(technicianStageHistory.notes &&
+					KURYE_NOTES.includes(technicianStageHistory.notes) &&
+					dentalWork?.notes &&
+					KURYE_NOTES.includes(dentalWork.notes)
+						? { notes: null }
+						: {}),
 				},
 			});
 

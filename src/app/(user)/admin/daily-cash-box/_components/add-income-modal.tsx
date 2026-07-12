@@ -154,6 +154,16 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 		? dentists?.filter((dentist) => dentist.clinicId === selectedClinicId)
 		: dentists;
 
+	// Seçili şubenin toplam borç/alacak durumu
+	const clinicDebtText = (() => {
+		if (!selectedClinicId || !clinicPaymentDetail) return null;
+		const remainingDebt = clinicPaymentDetail.summary.remainingDebt;
+		const formattedAmount = Math.abs(remainingDebt).toLocaleString("tr-TR");
+		if (remainingDebt > 0) return `Şube Toplam Borcu: ${formattedAmount} ₺`;
+		if (remainingDebt < 0) return `Şube ${formattedAmount} ₺ Alacaklı`;
+		return "Şube Borçsuz";
+	})();
+
 	// Doktor isimlerine kalan borç/alacak bilgisini ekle
 	const dentistsWithDebt = filteredDentists?.map((dentist) => {
 		const dentistDebt = clinicPaymentDetail?.dentistSummaries?.find(
@@ -228,6 +238,17 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 											placeholder="Klinik seçiniz"
 										/>
 									</FormControl>
+									{clinicDebtText && (
+										<p
+											className={`text-xs font-medium ${
+												clinicPaymentDetail && clinicPaymentDetail.summary.remainingDebt > 0
+													? "text-red-600"
+													: "text-green-600"
+											}`}
+										>
+											{clinicDebtText}
+										</p>
+									)}
 									<FormMessage />
 								</FormItem>
 							)}

@@ -308,8 +308,32 @@ export const dentalWorkRouter = createTRPCRouter({
 			});
 		}
 
+		const latestEntry = await ctx.db.stageHistory.findFirst({
+			where: { dentalWorkId: stageHistory.dentalWorkId },
+			orderBy: { createdAt: "desc" },
+		});
+
+		if (!latestEntry || latestEntry.id !== stageHistory.id) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Sadece en son eklenen aşama silinebilir",
+			});
+		}
+
 		await ctx.db.stageHistory.delete({
 			where: { id: input.stageHistoryId },
+		});
+
+		const previousEntry = await ctx.db.stageHistory.findFirst({
+			where: { dentalWorkId: stageHistory.dentalWorkId },
+			orderBy: { createdAt: "desc" },
+		});
+
+		await ctx.db.dentalWork.update({
+			where: { id: stageHistory.dentalWorkId },
+			data: {
+				prosthesisStageId: previousEntry?.prosthesisStageId ?? null,
+			},
 		});
 
 		return true;

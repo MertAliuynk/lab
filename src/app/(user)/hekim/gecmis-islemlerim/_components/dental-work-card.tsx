@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Calendar, MapPin, Palette, Stethoscope, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface DentalWorkCardProps {
 	dentalWork: {
@@ -40,6 +41,16 @@ interface DentalWorkCardProps {
 }
 
 export const DentalWorkCard = ({ dentalWork }: DentalWorkCardProps) => {
+	const router = useRouter();
+
+	const handleCardClick = (e: React.MouseEvent) => {
+		const target = e.target as HTMLElement;
+		if (target.closest("[data-prevent-navigation]")) {
+			return;
+		}
+		router.push(`/hekim/hasta/${dentalWork.patient.id}`);
+	};
+
 	const getJawTypeLabel = (jawType?: string | null) => {
 		switch (jawType) {
 			case "UPPER":
@@ -60,7 +71,7 @@ export const DentalWorkCard = ({ dentalWork }: DentalWorkCardProps) => {
 	};
 
 	return (
-		<Card className="hover:shadow-md transition-shadow">
+		<Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={handleCardClick}>
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<CardTitle className="text-lg font-semibold">{dentalWork.prosthesisType.name}</CardTitle>
@@ -138,20 +149,12 @@ export const DentalWorkCard = ({ dentalWork }: DentalWorkCardProps) => {
 					</div>
 				</div>
 
-				{dentalWork.notes && (
-					<>
-						<Separator className="my-4" />
-						<div>
-							<p className="text-sm font-medium mb-1">Notlar</p>
-							<p className="text-sm text-gray-600">{dentalWork.notes}</p>
-						</div>
-					</>
-				)}
-
 				{dentalWork.attachments && dentalWork.attachments.length > 0 && (
 					<>
 						<Separator className="my-4" />
-						<AttachmentGallery attachments={dentalWork.attachments} compact={false} />
+						<div data-prevent-navigation>
+							<AttachmentGallery attachments={dentalWork.attachments} compact={false} />
+						</div>
 					</>
 				)}
 

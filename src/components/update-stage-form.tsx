@@ -1,5 +1,16 @@
 "use client";
 
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +114,7 @@ export default function UpdateStageForm({
 	};
 
 	const currentStage = prosthesisStages.find((stage) => stage.id === currentStageId);
+	const selectedStage = prosthesisStages.find((stage) => stage.id === selectedStageId);
 	const stageItems = prosthesisStages.map((stage) => ({
 		id: stage.id,
 		name: stage.name,
@@ -165,14 +177,26 @@ export default function UpdateStageForm({
 					<FileUploadArea ref={fileUploadRef} onFilesChange={handleFilesChange} />
 				</div>
 
-				<Button
-					onClick={handleUpdateStage}
-					disabled={updateStageMutation.isPending || !selectedStageId}
-					className="w-full"
-				>
-					<Save className="w-4 h-4 mr-2" />
-					{updateStageMutation.isPending ? "Güncelleniyor..." : "Aşamayı Güncelle"}
-				</Button>
+				<AlertDialog>
+					<AlertDialogTrigger asChild>
+						<Button disabled={updateStageMutation.isPending || !selectedStageId} className="w-full">
+							<Save className="w-4 h-4 mr-2" />
+							{updateStageMutation.isPending ? "Güncelleniyor..." : "Aşamayı Güncelle"}
+						</Button>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Aşamayı Güncelle</AlertDialogTitle>
+							<AlertDialogDescription>
+								Aşamayı <strong>{selectedStage?.name}</strong> olarak güncellemek istediğinizden emin misiniz?
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>İptal</AlertDialogCancel>
+							<AlertDialogAction onClick={handleUpdateStage}>Evet, Güncelle</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</CardContent>
 		</Card>
 	);

@@ -74,3 +74,7 @@ export const createProsthesisSchema = z
 export const deleteProsthesisSchema = z.object({
 	id: z.string(),
 });
+
+export const deleteTechnicianStageHistorySchema = z.object({
+	technicianStageHistoryId: z.string(),
+});

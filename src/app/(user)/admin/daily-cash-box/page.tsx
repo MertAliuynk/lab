@@ -64,6 +64,8 @@ export default function DailyCashBoxPage() {
 	const [deleteType, setDeleteType] = useState<"income" | "expense" | null>(null);
 	const [deleteId, setDeleteId] = useState<string>("");
 
+	const utils = api.useUtils();
+
 	const {
 		data: dailyData,
 		isLoading,
@@ -121,6 +123,7 @@ export default function DailyCashBoxPage() {
 
 	const handleRefresh = () => {
 		refetch();
+		utils.admin.dailyCashBox.getCashBoxSummary.invalidate();
 	};
 
 	if (isLoading) {

@@ -94,3 +94,7 @@ export const getClinicPricesForProsthesisTypesSchema = z.object({
 export const deleteDentalWorkSchema = z.object({
 	id: z.string(),
 });
+
+export const deleteStageHistorySchema = z.object({
+	stageHistoryId: z.string(),
+});

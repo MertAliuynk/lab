@@ -5,8 +5,20 @@ import AddAdditionalTreatment from "@/components/add-additional-treatment";
 import AdditionalTreatmentListReadonly from "@/components/additional-treatment-list-readonly";
 import AttachmentGallery from "@/components/attachment-gallery";
 import DashboardHeader from "@/components/dashboard-header";
+import DeleteStageHistoryButton from "@/components/delete-stage-history-button";
 import PatientNotesList from "@/components/patient-notes-list";
 import UpdateTechnicianStageForm from "@/components/update-technician-stage-form";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +39,7 @@ import {
 	MapPin,
 	Palette,
 	Settings,
+	Undo2,
 	User,
 } from "lucide-react";
 import Link from "next/link";
@@ -318,36 +331,75 @@ export default function page() {
 
 													{/* Bitim Yap ve Tekrar doktora/kuryeye ver butonları */}
 													<div className="pt-4 border-t space-y-2">
-														<Button
-															className="w-full bg-green-600 hover:bg-green-700 text-white"
-															size="sm"
-															disabled={markAsCompleted.isPending}
-															onClick={() => {
-																markAsCompleted.mutate({ id: patient.id });
-															}}
-														>
-															<CheckCircle2 className="w-4 h-4 mr-2" />
-															{markAsCompleted.isPending ? 'Tamamlanıyor...' : 'Bitim Yap'}
-														</Button>
-														<Button
-															className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-															size="sm"
-															disabled={updateTechnicianStageMutation.isPending || dentalWorks.length === 0}
-															onClick={() => {
-																// Son dentalWork'u bul
-																const latestDentalWork = dentalWorks[0];
-																if (!latestDentalWork) return;
-																updateTechnicianStageMutation.mutate({
-																	dentalWorkId: latestDentalWork.id,
-																	technicianStageId: latestDentalWork.technicianStageId || undefined,
-																	notes: "KURYEE_VERILDI",
-																});
-															}}
-														>
-															{updateTechnicianStageMutation.isPending ? 'Gönderiliyor...' : 'Kuryeye Ver'}
-														</Button>
+														{!patient.isCompleted && (
+															<>
+																<AlertDialog>
+																	<AlertDialogTrigger asChild>
+																		<Button
+																			className="w-full bg-green-600 hover:bg-green-700 text-white"
+																			size="sm"
+																			disabled={markAsCompleted.isPending}
+																		>
+																			<CheckCircle2 className="w-4 h-4 mr-2" />
+																			{markAsCompleted.isPending ? 'Tamamlanıyor...' : 'Bitim Yap'}
+																		</Button>
+																	</AlertDialogTrigger>
+																	<AlertDialogContent>
+																		<AlertDialogHeader>
+																			<AlertDialogTitle>Bitim Yap</AlertDialogTitle>
+																			<AlertDialogDescription>
+																				Bu hastayı bitim yapmak istediğinizden emin misiniz? Bu işlemden sonra hasta
+																				"Tamamlandı" olarak işaretlenecek. Yanlışlıkla yaptıysanız daha sonra "Bitimi
+																				Geri Al" ile geri alabilirsiniz.
+																			</AlertDialogDescription>
+																		</AlertDialogHeader>
+																		<AlertDialogFooter>
+																			<AlertDialogCancel>İptal</AlertDialogCancel>
+																			<AlertDialogAction onClick={() => markAsCompleted.mutate({ id: patient.id })}>
+																				Evet, Bitim Yap
+																			</AlertDialogAction>
+																		</AlertDialogFooter>
+																	</AlertDialogContent>
+																</AlertDialog>
+																<AlertDialog>
+																	<AlertDialogTrigger asChild>
+																		<Button
+																			className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+																			size="sm"
+																			disabled={updateTechnicianStageMutation.isPending || dentalWorks.length === 0}
+																		>
+																			{updateTechnicianStageMutation.isPending ? 'Gönderiliyor...' : 'Kuryeye Ver'}
+																		</Button>
+																	</AlertDialogTrigger>
+																	<AlertDialogContent>
+																		<AlertDialogHeader>
+																			<AlertDialogTitle>Kuryeye Ver</AlertDialogTitle>
+																			<AlertDialogDescription>
+																				Bu hastayı kuryeye vermek istediğinizden emin misiniz?
+																			</AlertDialogDescription>
+																		</AlertDialogHeader>
+																		<AlertDialogFooter>
+																			<AlertDialogCancel>İptal</AlertDialogCancel>
+																			<AlertDialogAction
+																				onClick={() => {
+																					const latestDentalWork = dentalWorks[0];
+																					if (!latestDentalWork) return;
+																					updateTechnicianStageMutation.mutate({
+																						dentalWorkId: latestDentalWork.id,
+																						technicianStageId: latestDentalWork.technicianStageId || undefined,
+																						notes: "KURYEE_VERILDI",
+																					});
+																				}}
+																			>
+																				Evet, Kuryeye Ver
+																			</AlertDialogAction>
+																		</AlertDialogFooter>
+																	</AlertDialogContent>
+																</AlertDialog>
+															</>
+														)}
 														{patient.isCompleted && patient.completedAt && (
-															<div className="text-center">
+															<div className="text-center space-y-2">
 																<Badge className="w-full bg-green-600 text-white py-2">
 																	<CheckCircle2 className="w-4 h-4 mr-2" />
 																	Tamamlandı
@@ -355,6 +407,34 @@ export default function page() {
 																<p className="text-xs text-muted-foreground mt-2">
 																	{new Date(patient.completedAt).toLocaleDateString("tr-TR")} tarihinde tamamlandı
 																</p>
+																<AlertDialog>
+																	<AlertDialogTrigger asChild>
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			className="w-full"
+																			disabled={markAsOngoing.isPending}
+																		>
+																			<Undo2 className="w-4 h-4 mr-2" />
+																			{markAsOngoing.isPending ? "Geri Alınıyor..." : "Bitimi Geri Al"}
+																		</Button>
+																	</AlertDialogTrigger>
+																	<AlertDialogContent>
+																		<AlertDialogHeader>
+																			<AlertDialogTitle>Bitimi Geri Al</AlertDialogTitle>
+																			<AlertDialogDescription>
+																				Bu hastanın bitim durumunu geri almak istediğinizden emin misiniz? Hasta
+																				tekrar "Devam Ediyor" durumuna alınacak.
+																			</AlertDialogDescription>
+																		</AlertDialogHeader>
+																		<AlertDialogFooter>
+																			<AlertDialogCancel>İptal</AlertDialogCancel>
+																			<AlertDialogAction onClick={() => markAsOngoing.mutate({ id: patient.id })}>
+																				Evet, Geri Al
+																			</AlertDialogAction>
+																		</AlertDialogFooter>
+																	</AlertDialogContent>
+																</AlertDialog>
 															</div>
 														)}
 													</div>
@@ -705,6 +785,11 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 	const allHistory = [...prosthesisHistory, ...technicianHistory]
 		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+	// Teknisyen sadece kendi eklediği en son teknisyen aşamasını geri alabilir
+	const latestTechnicianEntryId = technicianHistory
+		.slice()
+		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.id;
+
 	const isLoading = stageHistoryQueries.some((query: { isLoading: boolean }) => query.isLoading) ||
 		technicianStageHistoryQueries.some((query: { isLoading: boolean }) => query.isLoading);
 
@@ -816,14 +901,24 @@ function StageHistorySection({ works }: { works: DentalWork[] }) {
 													}
 												</Badge>
 											</div>
-											<span className="text-xs text-muted-foreground">
-												{new Date(history.createdAt).toLocaleDateString("tr-TR", {
-													day: "numeric",
-													month: "short",
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
-											</span>
+											<div className="flex items-center gap-2">
+												<span className="text-xs text-muted-foreground">
+													{new Date(history.createdAt).toLocaleDateString("tr-TR", {
+														day: "numeric",
+														month: "short",
+														hour: "2-digit",
+														minute: "2-digit",
+													})}
+												</span>
+												{!isProsthesis && !isBitimRecord && history.id === latestTechnicianEntryId && (
+													<DeleteStageHistoryButton
+														role="technician"
+														historyId={history.id}
+														stageName={stageName}
+														onDeleted={() => window.location.reload()}
+													/>
+												)}
+											</div>
 										</div>
 
 									{history.notes &&

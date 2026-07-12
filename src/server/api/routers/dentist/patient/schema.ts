@@ -20,6 +20,10 @@ export const markAsCompletedSchema = z.object({
 	id: z.string(),
 });
 
+export const markAsOngoingSchema = z.object({
+	id: z.string(),
+});
+
 export const sendToTechnicianSchema = z.object({
 	id: z.string(),
 });

@@ -1,5 +1,6 @@
 import AttachmentGallery from "@/components/attachment-gallery";
 import DashboardHeader from "@/components/dashboard-header";
+import DeleteStageHistoryButton from "@/components/delete-stage-history-button";
 import EditProsthesisSheet from "@/components/edit-prosthesis-sheet";
 import PatientNotesList from "@/components/patient-notes-list";
 import AddDentistProsthesis from "@/components/add-dentist-prosthesis";
@@ -667,6 +668,11 @@ const CombinedStageHistorySection = async ({ works }: { works: DentalWork[] }) =
 			.flat()
 			.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+		// Doktor sadece kendi eklediği en son doktor aşamasını geri alabilir
+		const latestProsthesisEntryId = allHistory
+			.filter((h: any) => h.type === "prosthesis")
+			.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.id;
+
 		if (allHistory.length === 0) {
 			return (
 				<div className="border-t pt-4">
@@ -750,14 +756,19 @@ const CombinedStageHistorySection = async ({ works }: { works: DentalWork[] }) =
 																: 'Teknisyen Aşaması'}
 													</Badge>
 												</div>
-												<span className="text-xs text-muted-foreground">
-													{formatDateTime(history.createdAt, {
-														day: "numeric",
-														month: "short",
-														hour: "2-digit",
-														minute: "2-digit",
-													})}
-												</span>
+												<div className="flex items-center gap-2">
+													<span className="text-xs text-muted-foreground">
+														{formatDateTime(history.createdAt, {
+															day: "numeric",
+															month: "short",
+															hour: "2-digit",
+															minute: "2-digit",
+														})}
+													</span>
+													{isProsthesis && !isBitimRecord && history.id === latestProsthesisEntryId && (
+														<DeleteStageHistoryButton role="dentist" historyId={history.id} stageName={stageName} />
+													)}
+												</div>
 											</div>
 
 											{history.notes &&

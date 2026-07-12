@@ -5,6 +5,7 @@ import type { NewPatientNotification } from "@/types/socket";
 import {
 	createDentalWorkSchema,
 	deleteDentalWorkSchema,
+	deleteStageHistorySchema,
 	getByIdSchema,
 	getClinicPricesForProsthesisTypesSchema,
 	getDentalWorksByPatientIdSchema,
@@ -578,6 +579,61 @@ export const dentalWorkRouter = createTRPCRouter({
 			},
 			data: {
 				isDeleted: true,
+			},
+		});
+
+		return { success: true };
+	}),
+
+	deleteStageHistory: dentistProcedure.input(deleteStageHistorySchema).mutation(async ({ ctx, input }) => {
+		const stageHistory = await ctx.db.stageHistory.findFirst({
+			where: {
+				id: input.stageHistoryId,
+			},
+			include: {
+				dentalWork: true,
+			},
+		});
+
+		if (!stageHistory || stageHistory.dentalWork.dentistId !== ctx.dentist!.id) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Aşama geçmişi bulunamadı",
+			});
+		}
+
+		if (stageHistory.notes === "BITIM_YAPILDI") {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Bitim kaydını geri almak için 'Bitimi Geri Al' butonunu kullanın",
+			});
+		}
+
+		const latestEntry = await ctx.db.stageHistory.findFirst({
+			where: { dentalWorkId: stageHistory.dentalWorkId },
+			orderBy: { createdAt: "desc" },
+		});
+
+		if (!latestEntry || latestEntry.id !== stageHistory.id) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Sadece en son eklenen aşama silinebilir",
+			});
+		}
+
+		await ctx.db.stageHistory.delete({
+			where: { id: input.stageHistoryId },
+		});
+
+		const previousEntry = await ctx.db.stageHistory.findFirst({
+			where: { dentalWorkId: stageHistory.dentalWorkId },
+			orderBy: { createdAt: "desc" },
+		});
+
+		await ctx.db.dentalWork.update({
+			where: { id: stageHistory.dentalWorkId },
+			data: {
+				prosthesisStageId: previousEntry?.prosthesisStageId ?? null,
 			},
 		});
 
