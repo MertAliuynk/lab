@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ChevronRight, User, XCircle, CheckCircle2, ArrowRight, Repeat } from "lucide-react";
 import Link from "next/link";
-import PatientFeedback from "@/components/patient-feedback";
+import { getCompletionState } from "@/lib/patient-completion";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,6 +21,7 @@ type DentalWork = {
 		name?: string;
 	} | null;
 	notes?: string;
+	isCompleted?: boolean;
 };
 
 type Patient = {
@@ -64,6 +65,7 @@ export function PatientCard({ patient }: PatientCardProps) {
 				if (!acc[typeName]) {
 					acc[typeName] = {
 						count: 0,
+						completedCount: 0,
 						teeth: 0,
 						jaws: [],
 						pricingType,
@@ -71,6 +73,9 @@ export function PatientCard({ patient }: PatientCardProps) {
 					};
 				}
 				acc[typeName].count += 1;
+				if (work.isCompleted) {
+					acc[typeName].completedCount += 1;
+				}
 				if (pricingType === "JAW_BASED") {
 					// Çene bazlı ise seçili çeneleri ekle
 					if (Array.isArray((work as any).selectedJaws)) {
@@ -87,7 +92,10 @@ export function PatientCard({ patient }: PatientCardProps) {
 
 				return acc;
 			},
-			{} as Record<string, { count: number; teeth: number; jaws: string[]; pricingType: string; maxPercentage: number }>,
+			{} as Record<
+				string,
+				{ count: number; completedCount: number; teeth: number; jaws: string[]; pricingType: string; maxPercentage: number }
+			>,
 		) || {};
 
 	const prosthesisTypes = Object.entries(groupedByType);
@@ -95,6 +103,8 @@ export function PatientCard({ patient }: PatientCardProps) {
 	// Yüzde kontrolü kaldırıldı - sadece manuel bitim kontrolü
 
 	const isFullyCompleted = patient.isCompleted || false;
+	const completionState = getCompletionState(patient.dentalWorks);
+	const isPartiallyCompleted = completionState === "partial";
 	const lastUpdateBy = patient.lastUpdateBy;
 	const isSentToTechnician = !!patient.isSentToTechnician;
 
@@ -154,6 +164,8 @@ export function PatientCard({ patient }: PatientCardProps) {
 				<Card className={`group h-full justify-between transition-all duration-200 hover:shadow-lg cursor-pointer ${
 					isFullyCompleted
 						? 'border-2 border-gray-600 bg-black/40 hover:border-gray-700 hover:shadow-gray-500'
+						: isPartiallyCompleted
+						? 'border-2 border-amber-400 bg-amber-50/60 hover:border-amber-500 hover:shadow-amber-200'
 						: lastStageKurye
 						? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
 						: lastStageBitim
@@ -231,21 +243,22 @@ export function PatientCard({ patient }: PatientCardProps) {
 									} else if ((data as any).jawType) {
 										jawText = (data as any).jawType === "UPPER" ? "Üst Çene" : (data as any).jawType === "LOWER" ? "Alt Çene" : "Belirtilmemiş";
 									}
+									const isGroupCompleted = data.completedCount === data.count;
 									return (
 										<div
 											key={typeName}
 											className={`flex items-center justify-between p-3 rounded-lg border ${
-												isFullyCompleted 
-													? 'bg-gray-800 border-gray-700' 
+												isGroupCompleted
+													? 'bg-gray-800 border-gray-700'
 													: 'bg-gray-50 border-gray-100'
 												}`}
 										>
 											<div className="flex items-center space-x-2">
 												<div className={`w-2 h-2 rounded-full ${
-													isFullyCompleted ? 'bg-gray-400' : 'bg-emerald-500'
+													isGroupCompleted ? 'bg-gray-400' : 'bg-emerald-500'
 												}`}/>
 												<span className={`text-sm font-medium ${
-													isFullyCompleted ? 'text-gray-200' : 'text-gray-900'
+													isGroupCompleted ? 'text-gray-200' : 'text-gray-900'
 												}`}>
 													{jawText} {typeName}
 												</span>
@@ -253,33 +266,34 @@ export function PatientCard({ patient }: PatientCardProps) {
 											<Badge
 												variant="outline"
 												className={`text-xs font-medium ${
-													isFullyCompleted
+													isGroupCompleted
 														? "border-gray-600 text-gray-200 bg-gray-700"
 														: "border-blue-200 text-blue-700 bg-blue-50"
 													}`}
 												>
-													{isFullyCompleted ? "Tamamlandı" : "Devam ediyor"}
+													{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 												</Badge>
 										</div>
 									);
 								}
 								// Diş bazlı ise üye sayısı ile göster, çene bazlı ise sadece çene ve tip adı göster
 								if (data.pricingType === "TOOTH_BASED") {
+									const isGroupCompleted = data.completedCount === data.count;
 									return (
 										<div
 											key={typeName}
 											className={`flex items-center justify-between p-3 rounded-lg border ${
-												isFullyCompleted 
-												? 'bg-gray-800 border-gray-700' 
+												isGroupCompleted
+												? 'bg-gray-800 border-gray-700'
 												: 'bg-gray-50 border-gray-100'
 											}`}
 										>
 											<div className="flex items-center space-x-2">
 												<div className={`w-2 h-2 rounded-full ${
-													isFullyCompleted ? 'bg-gray-400' : 'bg-emerald-500'
+													isGroupCompleted ? 'bg-gray-400' : 'bg-emerald-500'
 												}`}/>
 												<span className={`text-sm font-medium ${
-													isFullyCompleted ? 'text-gray-200' : 'text-gray-900'
+													isGroupCompleted ? 'text-gray-200' : 'text-gray-900'
 												}`}>
 													{data.teeth} Üye {typeName}
 												</span>
@@ -287,12 +301,12 @@ export function PatientCard({ patient }: PatientCardProps) {
 											<Badge
 												variant="outline"
 												className={`text-xs font-medium ${
-													isFullyCompleted
+													isGroupCompleted
 														? "border-gray-600 text-gray-200 bg-gray-700"
 														: "border-blue-200 text-blue-700 bg-blue-50"
 													}`}
 												>
-													{isFullyCompleted ? "Tamamlandı" : "Devam ediyor"}
+													{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 												</Badge>
 										</div>
 									);
@@ -300,21 +314,22 @@ export function PatientCard({ patient }: PatientCardProps) {
 									// Çene bazlıda tekrar eden çeneleri kaldırıp sadece çene ve tip adı göster
 									const uniqueJaws = Array.from(new Set(data.jaws));
 									const jawLabels = uniqueJaws.map(jaw => jaw === "UPPER" ? "Üst Çene" : jaw === "LOWER" ? "Alt Çene" : jaw);
+									const isGroupCompleted = data.completedCount === data.count;
 									return (
 										<div
 											key={typeName}
 											className={`flex items-center justify-between p-3 rounded-lg border ${
-												isFullyCompleted 
-													? 'bg-gray-800 border-gray-700' 
+												isGroupCompleted
+													? 'bg-gray-800 border-gray-700'
 													: 'bg-gray-50 border-gray-100'
 												}`}
 										>
 											<div className="flex items-center space-x-2">
 												<div className={`w-2 h-2 rounded-full ${
-													isFullyCompleted ? 'bg-gray-400' : 'bg-emerald-500'
+													isGroupCompleted ? 'bg-gray-400' : 'bg-emerald-500'
 												}`}/>
 												<span className={`text-sm font-medium ${
-													isFullyCompleted ? 'text-gray-200' : 'text-gray-900'
+													isGroupCompleted ? 'text-gray-200' : 'text-gray-900'
 												}`}>
 													{jawLabels.join(", ")} {typeName}
 												</span>
@@ -322,12 +337,12 @@ export function PatientCard({ patient }: PatientCardProps) {
 											<Badge
 												variant="outline"
 												className={`text-xs font-medium ${
-													isFullyCompleted
+													isGroupCompleted
 														? "border-gray-600 text-gray-200 bg-gray-700"
 														: "border-blue-200 text-blue-700 bg-blue-50"
 													}`}
 												>
-													{isFullyCompleted ? "Tamamlandı" : "Devam ediyor"}
+													{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 												</Badge>
 										</div>
 									);
@@ -342,8 +357,22 @@ export function PatientCard({ patient }: PatientCardProps) {
 				</div>
 				
 				{/* Lokasyon Badge - Sadece devam eden hastalar için */}
+								{/* Bazı tedaviler tamamlanmış bazıları devam ediyorsa "Kısmen Tamamlandı" etiketi göster */}
+								{isPartiallyCompleted && (
+									<div className="mt-3 pt-3 border-t border-gray-100">
+										<div className="flex items-center justify-center">
+											<Badge
+												variant="outline"
+												className="text-xs font-medium border-amber-300 text-amber-800 bg-amber-100"
+											>
+												<div className="w-2 h-2 rounded-full mr-2 bg-amber-500"/>
+												Kısmen Tamamlandı
+											</Badge>
+										</div>
+									</div>
+								)}
 								{/* Sadece en son aşama Kuryeye Verildi ise ve tamamlanmadıysa "Doktorda" etiketi göster */}
-								{lastStageKurye && !isFullyCompleted && (
+								{!isPartiallyCompleted && lastStageKurye && !isFullyCompleted && (
 									<div className="mt-3 pt-3 border-t border-gray-100">
 										<div className="flex items-center justify-center">
 											<Badge 
@@ -357,7 +386,7 @@ export function PatientCard({ patient }: PatientCardProps) {
 									</div>
 								)}
 								{/* Sadece en son aşama ne Kuryeye Verildi ne de Bitim Yapıldı ise ve tamamlanmadıysa "Teknisyende" etiketi göster */}
-								{!lastStageKurye && !lastStageBitim && !isFullyCompleted && (
+								{!isPartiallyCompleted && !lastStageKurye && !lastStageBitim && !isFullyCompleted && (
 									<div className="mt-3 pt-3 border-t border-gray-100">
 										<div className="flex items-center justify-center">
 											<Badge 
@@ -380,13 +409,9 @@ export function PatientCard({ patient }: PatientCardProps) {
 					</div>
 					<div className="flex items-center gap-1">
 						{isFullyCompleted && (
-							<>
-								<span className="text-xs font-medium text-gray-200 bg-gray-700 px-2 py-1 rounded-full">
-									Tamamlandı
-								</span>
-								{/* Feedback butonu artık Link'in dışında! */}
-								<PatientFeedback data-prevent-navigation patientId={patient.id} patientName={patient.name} isCompleted={isFullyCompleted} />
-							</>
+							<span className="text-xs font-medium text-gray-200 bg-gray-700 px-2 py-1 rounded-full">
+								Tamamlandı
+							</span>
 						)}
 					</div>
 				</div>

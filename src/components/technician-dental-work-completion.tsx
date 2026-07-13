@@ -15,32 +15,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/trpc/react";
 import { CheckCircle2, Undo2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-interface DentistPatientCompletionProps {
+interface TechnicianDentalWorkCompletionProps {
 	dentalWork: {
 		id: string;
 		isCompleted: boolean;
 	};
 }
 
-export default function DentistPatientCompletion({ dentalWork }: DentistPatientCompletionProps) {
-	const router = useRouter();
-	const utils = api.useUtils();
-
-	const markAsCompleted = api.dentist.patient.markAsCompleted.useMutation({
-		onSuccess: async () => {
-			await utils.dentist.dentalWork.getByPatientId.invalidate();
-			await utils.dentist.patient.getMy.invalidate();
-			router.refresh();
+export default function TechnicianDentalWorkCompletion({ dentalWork }: TechnicianDentalWorkCompletionProps) {
+	const markAsCompleted = api.laboratoryTechnician.patient.markAsCompleted.useMutation({
+		onSuccess: () => {
+			window.location.reload();
 		},
 	});
 
-	const markAsOngoing = api.dentist.patient.markAsOngoing.useMutation({
-		onSuccess: async () => {
-			await utils.dentist.dentalWork.getByPatientId.invalidate();
-			await utils.dentist.patient.getMy.invalidate();
-			router.refresh();
+	const markAsOngoing = api.laboratoryTechnician.patient.markAsOngoing.useMutation({
+		onSuccess: () => {
+			window.location.reload();
 		},
 	});
 

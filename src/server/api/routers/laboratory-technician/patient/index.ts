@@ -1,4 +1,5 @@
 import { createTRPCRouter, laboratoryTechnicianProcedure } from "@/server/api/trpc";
+import { recomputePatientCompletion } from "@/server/api/routers/_shared/patient-completion";
 import { getAllPatientsSchema, getDentalWorksByPatientIdSchema, getPatientByIdSchema } from "./schema";
 import { z } from "zod";
 
@@ -169,152 +170,114 @@ export const patientRouter = createTRPCRouter({
 	}),
 
 	markAsCompleted: laboratoryTechnicianProcedure
-		.input(z.object({ id: z.string() }))
+		.input(z.object({ dentalWorkId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			// Önce hastayı tamamlandı olarak işaretle
-			const patient = await ctx.db.patient.update({
-				where: { id: input.id },
+			const dentalWork = await ctx.db.dentalWork.update({
+				where: { id: input.dentalWorkId },
 				data: {
 					isCompleted: true,
-					completedAt: new Date(),
 				},
 				include: {
-					dentalWorks: {
-						where: {
-							isDeleted: false,
-						},
-						include: {
-							prosthesisType: true,
-							dentist: true,
-						},
-					},
+					prosthesisType: true,
+					dentist: true,
 				},
 			});
 
-			// Tüm dental work'ler için hem bitim kaydı ekle hem de isCompleted alanını güncelle
-			for (const dentalWork of patient.dentalWorks) {
-				// DentalWork'ü de tamamlandı olarak işaretle
-				await ctx.db.dentalWork.update({
-					where: { id: dentalWork.id },
-					data: {
-						isCompleted: true,
-					},
-				});
+			await ctx.db.technicianStageHistory.create({
+				data: {
+					dentalWorkId: dentalWork.id,
+					technicianStageId: null, // Özel durum: bitim kaydı
+					notes: "BITIM_YAPILDI", // Özel işaretleyici
+					laboratoryTechnicianId: ctx.laboratoryTechnician.id,
+				},
+			});
 
-				await ctx.db.technicianStageHistory.create({
-					data: {
+			// Bu protez için ödeme kaydı oluştur
+			const unitPrice = Number(dentalWork.unitPrice || 0);
+			const totalPrice = Number(dentalWork.totalPrice || 0);
+
+			if (totalPrice > 0) {
+				// Mevcut ödeme kaydı var mı kontrol et
+				const existingPayment = await ctx.db.payment.findFirst({
+					where: {
 						dentalWorkId: dentalWork.id,
-						technicianStageId: null, // Özel durum: bitim kaydı
-						notes: "BITIM_YAPILDI", // Özel işaretleyici
-						laboratoryTechnicianId: ctx.laboratoryTechnician.id,
 					},
 				});
-			}
 
-			// Bu hastanın tüm protezleri için ödeme kaydı oluştur
-			for (const dentalWork of patient.dentalWorks) {
-				const unitPrice = Number(dentalWork.unitPrice || 0);
-				const totalPrice = Number(dentalWork.totalPrice || 0);
+				// Eğer ödeme kaydı yoksa oluştur
+				if (!existingPayment) {
+					let quantity = 1;
+					if (dentalWork.prosthesisType.pricingType === "JAW_BASED") {
+						quantity = dentalWork.selectedJaws?.length || 1;
+					} else {
+						quantity = dentalWork.selectedTeeth?.length || 1;
+					}
 
-				if (totalPrice > 0) {
-					// Mevcut ödeme kaydı var mı kontrol et
-					const existingPayment = await ctx.db.payment.findFirst({
-						where: {
+					const paymentNotes =
+						dentalWork.prosthesisType.pricingType === "JAW_BASED"
+							? `${dentalWork.id} - Hasta bitimi ile eklenen ödeme (${quantity} çene x ₺${unitPrice})`
+							: `${dentalWork.id} - Hasta bitimi ile eklenen ödeme (${quantity} diş x ₺${unitPrice})`;
+
+					await ctx.db.payment.create({
+						data: {
+							amount: totalPrice,
+							paymentDate: new Date(),
+							paymentType: "CASH",
+							notes: paymentNotes,
+							dentistId: dentalWork.dentistId,
+							clinicId: dentalWork.dentist.clinicId,
 							dentalWorkId: dentalWork.id,
 						},
 					});
-
-					// Eğer ödeme kaydı yoksa oluştur
-					if (!existingPayment) {
-						let quantity = 1;
-						if (dentalWork.prosthesisType.pricingType === "JAW_BASED") {
-							quantity = dentalWork.selectedJaws?.length || 1;
-						} else {
-							quantity = dentalWork.selectedTeeth?.length || 1;
-						}
-
-						const paymentNotes =
-							dentalWork.prosthesisType.pricingType === "JAW_BASED"
-								? `${dentalWork.id} - Hasta bitimi ile eklenen ödeme (${quantity} çene x ₺${unitPrice})`
-								: `${dentalWork.id} - Hasta bitimi ile eklenen ödeme (${quantity} diş x ₺${unitPrice})`;
-
-						await ctx.db.payment.create({
-							data: {
-								amount: totalPrice,
-								paymentDate: new Date(),
-								paymentType: "CASH",
-								notes: paymentNotes,
-								dentistId: dentalWork.dentistId,
-								clinicId: dentalWork.dentist.clinicId,
-								dentalWorkId: dentalWork.id,
-							},
-						});
-					}
 				}
 			}
 
-			return patient;
+			// Hastanın tüm tedavileri bitti mi diye kontrol edip hasta durumunu güncelle
+			await recomputePatientCompletion(dentalWork.patientId);
+
+			return dentalWork;
 		}),
 
 	markAsOngoing: laboratoryTechnicianProcedure
-		.input(z.object({ id: z.string() }))
+		.input(z.object({ dentalWorkId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			// Hastayı devam eden duruma al
-			const patient = await ctx.db.patient.update({
-				where: { id: input.id },
+			const dentalWork = await ctx.db.dentalWork.update({
+				where: { id: input.dentalWorkId },
 				data: {
 					isCompleted: false,
-					completedAt: null,
 				},
-				include: {
-					dentalWorks: {
-						where: {
-							isDeleted: false,
-						},
+			});
+
+			await ctx.db.technicianStageHistory.deleteMany({
+				where: {
+					dentalWorkId: dentalWork.id,
+					notes: "BITIM_YAPILDI",
+					laboratoryTechnicianId: ctx.laboratoryTechnician.id,
+				},
+			});
+			// Yeni technician history kaydı ekle
+			await ctx.db.technicianStageHistory.create({
+				data: {
+					dentalWorkId: dentalWork.id,
+					technicianStageId: null,
+					notes: "TEKRAR_DOKTORA_VERILDI",
+					laboratoryTechnicianId: ctx.laboratoryTechnician.id,
+				},
+			});
+
+			// Bu protez için otomatik oluşturulmuş ödeme kaydını sil
+			await ctx.db.payment.deleteMany({
+				where: {
+					dentalWorkId: dentalWork.id,
+					notes: {
+						contains: "Hasta bitimi ile eklenen ödeme",
 					},
 				},
 			});
 
-			// Bitim kayıtlarını sil ve yeni technician history ekle (tekrar doktora verildi)
-			for (const dentalWork of patient.dentalWorks) {
-				// DentalWork'ü de devam eden duruma al
-				await ctx.db.dentalWork.update({
-					where: { id: dentalWork.id },
-					data: {
-						isCompleted: false,
-					},
-				});
+			// Hastanın tüm tedavileri bitti mi diye kontrol edip hasta durumunu güncelle
+			await recomputePatientCompletion(dentalWork.patientId);
 
-				await ctx.db.technicianStageHistory.deleteMany({
-					where: {
-						dentalWorkId: dentalWork.id,
-						notes: "BITIM_YAPILDI",
-						laboratoryTechnicianId: ctx.laboratoryTechnician.id,
-					},
-				});
-				// Yeni technician history kaydı ekle
-				await ctx.db.technicianStageHistory.create({
-					data: {
-						dentalWorkId: dentalWork.id,
-						technicianStageId: null,
-						notes: "TEKRAR_DOKTORA_VERILDI",
-						laboratoryTechnicianId: ctx.laboratoryTechnician.id,
-					},
-				});
-			}
-
-			// Bu hastanın protezleri için otomatik oluşturulmuş ödeme kayıtlarını sil
-			for (const dentalWork of patient.dentalWorks) {
-				await ctx.db.payment.deleteMany({
-					where: {
-						dentalWorkId: dentalWork.id,
-						notes: {
-							contains: "Hasta bitimi ile eklenen ödeme",
-						},
-					},
-				});
-			}
-
-			return patient;
+			return dentalWork;
 		}),
 });

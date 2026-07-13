@@ -13,15 +13,19 @@ import { toast } from "sonner";
 type PatientFeedbackProps = {
 	patientId: string;
 	patientName: string;
-	isCompleted: boolean;
+	dentalWorkId: string;
+	dentalWorkTitle?: string;
+	dentalWorkIsCompleted: boolean;
 	onSuccess?: () => void;
 };
 
-export default function PatientFeedback({ 
-	patientId, 
-	patientName, 
-	isCompleted, 
-	onSuccess 
+export default function PatientFeedback({
+	patientId,
+	patientName,
+	dentalWorkId,
+	dentalWorkTitle,
+	dentalWorkIsCompleted,
+	onSuccess
 }: PatientFeedbackProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [feedbackText, setFeedbackText] = useState("");
@@ -35,8 +39,8 @@ export default function PatientFeedback({
 
 	// Mevcut feedback'leri getir
 	const { data: existingFeedbacks = [], isLoading } = api.dentist.feedback.getByPatient.useQuery(
-		{ patientId },
-		{ enabled: isCompleted }
+		{ patientId, dentalWorkId },
+		{ enabled: dentalWorkIsCompleted }
 	);
 
 	// Feedback oluşturma mutation
@@ -71,6 +75,7 @@ export default function PatientFeedback({
 
 		createFeedbackMutation.mutate({
 			patientId,
+			dentalWorkId,
 			feedbackText: feedbackText.trim(),
 			infrastructureRating,
 			speedRating,
@@ -111,8 +116,8 @@ export default function PatientFeedback({
 		</div>
 	);
 
-	// Eğer hasta tamamlanmamışsa, component'i gösterme
-	if (!isCompleted) {
+	// Eğer bu tedavi tamamlanmamışsa, component'i gösterme
+	if (!dentalWorkIsCompleted) {
 		return null;
 	}
 
@@ -135,7 +140,7 @@ export default function PatientFeedback({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<MessageSquare className="w-5 h-5 text-blue-600" />
-						{patientName} İçin Feedback
+						{patientName}{dentalWorkTitle ? ` — ${dentalWorkTitle}` : ""} İçin Feedback
 					</DialogTitle>
 					<DialogDescription>
 						Laboratuvar çalışmasını değerlendirin. Bu bildirim teknisyen panelinde görünecektir.

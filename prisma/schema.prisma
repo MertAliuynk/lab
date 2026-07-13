@@ -198,6 +198,7 @@ model DentalWork {
   technicianStageHistories       TechnicianStageHistory[]
   trials                         Trial[]
   dentalWorkAdditionalTreatments DentalWorkAdditionalTreatment[]
+  patientFeedbacks               PatientFeedback[]
 }
 
 model ProsthesisStage {
@@ -405,6 +406,7 @@ enum PricingType {
 model PatientFeedback {
   id                     String   @id @default(cuid())
   patientId              String
+  dentalWorkId           String?
   dentistId              String
   laboratoryTechnicianId String?
   feedbackText           String
@@ -419,6 +421,7 @@ model PatientFeedback {
   updatedAt              DateTime @updatedAt
 
   patient              Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  dentalWork           DentalWork?           @relation(fields: [dentalWorkId], references: [id], onDelete: SetNull)
   dentist              Dentist               @relation(fields: [dentistId], references: [id], onDelete: Cascade)
   laboratoryTechnician LaboratoryTechnician? @relation(fields: [laboratoryTechnicianId], references: [id])
 }

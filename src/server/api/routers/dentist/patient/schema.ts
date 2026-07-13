@@ -17,11 +17,11 @@ export const updatePatientNotesSchema = z.object({
 
 
 export const markAsCompletedSchema = z.object({
-	id: z.string(),
+	dentalWorkId: z.string(),
 });
 
 export const markAsOngoingSchema = z.object({
-	id: z.string(),
+	dentalWorkId: z.string(),
 });
 
 export const sendToTechnicianSchema = z.object({

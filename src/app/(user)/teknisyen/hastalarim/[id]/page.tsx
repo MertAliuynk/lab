@@ -7,6 +7,7 @@ import AttachmentGallery from "@/components/attachment-gallery";
 import DashboardHeader from "@/components/dashboard-header";
 import DeleteStageHistoryButton from "@/components/delete-stage-history-button";
 import PatientNotesList from "@/components/patient-notes-list";
+import TechnicianDentalWorkCompletion from "@/components/technician-dental-work-completion";
 import UpdateDeliveryDateForm from "@/components/update-delivery-date-form";
 import UpdateTechnicianStageForm from "@/components/update-technician-stage-form";
 import {
@@ -41,7 +42,6 @@ import {
 	MapPin,
 	Palette,
 	Settings,
-	Undo2,
 	User,
 } from "lucide-react";
 import Link from "next/link";
@@ -108,21 +108,6 @@ export default function page() {
 			price: t.price,
 			notes: t.notes,
 		}));
-
-
-		const markAsCompleted = api.laboratoryTechnician.patient.markAsCompleted.useMutation({
-			onSuccess: () => {
-				// Hasta tamamlandı, sayfayı yenile
-				window.location.reload();
-			},
-		});
-
-		// markAsOngoing mutation
-		const markAsOngoing = api.laboratoryTechnician.patient.markAsOngoing.useMutation({
-			onSuccess: () => {
-				window.location.reload();
-			},
-		});
 
 	if (patientLoading || dentalWorksLoading) {
 				return (
@@ -331,115 +316,57 @@ export default function page() {
 								</div>
 							)}
 
-													{/* Bitim Yap ve Tekrar doktora/kuryeye ver butonları */}
-													<div className="pt-4 border-t space-y-2">
-														{!patient.isCompleted && (
-															<>
-																<AlertDialog>
-																	<AlertDialogTrigger asChild>
-																		<Button
-																			className="w-full bg-green-600 hover:bg-green-700 text-white"
-																			size="sm"
-																			disabled={markAsCompleted.isPending}
+													{/* Tekrar doktora/kuryeye ver butonu */}
+													{!patient.isCompleted && (
+														<div className="pt-4 border-t">
+															<AlertDialog>
+																<AlertDialogTrigger asChild>
+																	<Button
+																		className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+																		size="sm"
+																		disabled={updateTechnicianStageMutation.isPending || dentalWorks.length === 0}
+																	>
+																		{updateTechnicianStageMutation.isPending ? 'Gönderiliyor...' : 'Kuryeye Ver'}
+																	</Button>
+																</AlertDialogTrigger>
+																<AlertDialogContent>
+																	<AlertDialogHeader>
+																		<AlertDialogTitle>Kuryeye Ver</AlertDialogTitle>
+																		<AlertDialogDescription>
+																			Bu hastayı kuryeye vermek istediğinizden emin misiniz?
+																		</AlertDialogDescription>
+																	</AlertDialogHeader>
+																	<AlertDialogFooter>
+																		<AlertDialogCancel>İptal</AlertDialogCancel>
+																		<AlertDialogAction
+																			onClick={() => {
+																				const latestDentalWork = dentalWorks[0];
+																				if (!latestDentalWork) return;
+																				updateTechnicianStageMutation.mutate({
+																					dentalWorkId: latestDentalWork.id,
+																					technicianStageId: latestDentalWork.technicianStageId || undefined,
+																					notes: "KURYEE_VERILDI",
+																				});
+																			}}
 																		>
-																			<CheckCircle2 className="w-4 h-4 mr-2" />
-																			{markAsCompleted.isPending ? 'Tamamlanıyor...' : 'Bitim Yap'}
-																		</Button>
-																	</AlertDialogTrigger>
-																	<AlertDialogContent>
-																		<AlertDialogHeader>
-																			<AlertDialogTitle>Bitim Yap</AlertDialogTitle>
-																			<AlertDialogDescription>
-																				Bu hastayı bitim yapmak istediğinizden emin misiniz? Bu işlemden sonra hasta
-																				"Tamamlandı" olarak işaretlenecek. Yanlışlıkla yaptıysanız daha sonra "Bitimi
-																				Geri Al" ile geri alabilirsiniz.
-																			</AlertDialogDescription>
-																		</AlertDialogHeader>
-																		<AlertDialogFooter>
-																			<AlertDialogCancel>İptal</AlertDialogCancel>
-																			<AlertDialogAction onClick={() => markAsCompleted.mutate({ id: patient.id })}>
-																				Evet, Bitim Yap
-																			</AlertDialogAction>
-																		</AlertDialogFooter>
-																	</AlertDialogContent>
-																</AlertDialog>
-																<AlertDialog>
-																	<AlertDialogTrigger asChild>
-																		<Button
-																			className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-																			size="sm"
-																			disabled={updateTechnicianStageMutation.isPending || dentalWorks.length === 0}
-																		>
-																			{updateTechnicianStageMutation.isPending ? 'Gönderiliyor...' : 'Kuryeye Ver'}
-																		</Button>
-																	</AlertDialogTrigger>
-																	<AlertDialogContent>
-																		<AlertDialogHeader>
-																			<AlertDialogTitle>Kuryeye Ver</AlertDialogTitle>
-																			<AlertDialogDescription>
-																				Bu hastayı kuryeye vermek istediğinizden emin misiniz?
-																			</AlertDialogDescription>
-																		</AlertDialogHeader>
-																		<AlertDialogFooter>
-																			<AlertDialogCancel>İptal</AlertDialogCancel>
-																			<AlertDialogAction
-																				onClick={() => {
-																					const latestDentalWork = dentalWorks[0];
-																					if (!latestDentalWork) return;
-																					updateTechnicianStageMutation.mutate({
-																						dentalWorkId: latestDentalWork.id,
-																						technicianStageId: latestDentalWork.technicianStageId || undefined,
-																						notes: "KURYEE_VERILDI",
-																					});
-																				}}
-																			>
-																				Evet, Kuryeye Ver
-																			</AlertDialogAction>
-																		</AlertDialogFooter>
-																	</AlertDialogContent>
-																</AlertDialog>
-															</>
-														)}
-														{patient.isCompleted && patient.completedAt && (
-															<div className="text-center space-y-2">
-																<Badge className="w-full bg-green-600 text-white py-2">
-																	<CheckCircle2 className="w-4 h-4 mr-2" />
-																	Tamamlandı
-																</Badge>
-																<p className="text-xs text-muted-foreground mt-2">
-																	{new Date(patient.completedAt).toLocaleDateString("tr-TR")} tarihinde tamamlandı
-																</p>
-																<AlertDialog>
-																	<AlertDialogTrigger asChild>
-																		<Button
-																			variant="outline"
-																			size="sm"
-																			className="w-full"
-																			disabled={markAsOngoing.isPending}
-																		>
-																			<Undo2 className="w-4 h-4 mr-2" />
-																			{markAsOngoing.isPending ? "Geri Alınıyor..." : "Bitimi Geri Al"}
-																		</Button>
-																	</AlertDialogTrigger>
-																	<AlertDialogContent>
-																		<AlertDialogHeader>
-																			<AlertDialogTitle>Bitimi Geri Al</AlertDialogTitle>
-																			<AlertDialogDescription>
-																				Bu hastanın bitim durumunu geri almak istediğinizden emin misiniz? Hasta
-																				tekrar "Devam Ediyor" durumuna alınacak.
-																			</AlertDialogDescription>
-																		</AlertDialogHeader>
-																		<AlertDialogFooter>
-																			<AlertDialogCancel>İptal</AlertDialogCancel>
-																			<AlertDialogAction onClick={() => markAsOngoing.mutate({ id: patient.id })}>
-																				Evet, Geri Al
-																			</AlertDialogAction>
-																		</AlertDialogFooter>
-																	</AlertDialogContent>
-																</AlertDialog>
-															</div>
-														)}
-													</div>
+																			Evet, Kuryeye Ver
+																		</AlertDialogAction>
+																	</AlertDialogFooter>
+																</AlertDialogContent>
+															</AlertDialog>
+														</div>
+													)}
+													{patient.isCompleted && patient.completedAt && (
+														<div className="pt-4 border-t text-center">
+															<Badge className="w-full bg-green-600 text-white py-2">
+																<CheckCircle2 className="w-4 h-4 mr-2" />
+																Tüm Tedaviler Tamamlandı
+															</Badge>
+															<p className="text-xs text-muted-foreground mt-2">
+																{new Date(patient.completedAt).toLocaleDateString("tr-TR")} tarihinde tamamlandı
+															</p>
+														</div>
+													)}
 						</CardContent>
 					</Card>
 
@@ -550,6 +477,11 @@ export default function page() {
 													role="technician"
 													dentalWorkId={latestWork.id}
 													currentDeliveryDate={latestWork.deliveryDate}
+												/>
+
+												{/* Bitim Yap - bu tedaviye özel */}
+												<TechnicianDentalWorkCompletion
+													dentalWork={{ id: latestWork.id, isCompleted: latestWork.isCompleted }}
 												/>
 
 												{/* Ek Tedaviler Alanı - Aşama güncelleme altı */}

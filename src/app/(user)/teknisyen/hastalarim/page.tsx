@@ -25,6 +25,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { getCompletionState } from "@/lib/patient-completion";
 import { api } from "@/trpc/react";
 import { Activity, ArrowRight, Calendar, CheckCircle2, Search, User, Users, Zap } from "lucide-react";
 import Link from "next/link";
@@ -314,6 +315,7 @@ export default function page() {
 									if (!acc[typeName]) {
 										acc[typeName] = {
 											count: 0,
+											completedCount: 0,
 											teeth: 0,
 											jaws: [],
 											pricingType,
@@ -321,6 +323,9 @@ export default function page() {
 										};
 									}
 									acc[typeName].count += 1;
+									if (work.isCompleted) {
+										acc[typeName].completedCount += 1;
+									}
 									if (pricingType === "JAW_BASED" && Array.isArray((work as any).selectedJaws)) {
 										acc[typeName].jaws.push(...(work as any).selectedJaws);
 									} else {
@@ -334,7 +339,10 @@ export default function page() {
 
 									return acc;
 								},
-								{} as Record<string, { count: number; teeth: number; jaws: string[]; pricingType: string; maxPercentage: number }>,
+								{} as Record<
+									string,
+									{ count: number; completedCount: number; teeth: number; jaws: string[]; pricingType: string; maxPercentage: number }
+								>,
 							) || {};
 
 						const prosthesisTypes = Object.entries(groupedByType);
@@ -342,6 +350,8 @@ export default function page() {
 						// Yüzde kontrolü kaldırıldı - sadece manuel bitim kontrolü
 						const patientWithCompletion = patient as typeof patient & { isCompleted?: boolean };
 						const isFullyCompleted = patientWithCompletion.isCompleted || false;
+						const completionState = getCompletionState(patient.dentalWorks);
+						const isPartiallyCompleted = completionState === "partial";
 
 						// Extract lastUpdateBy for color logic
 						const patientWithUpdate = patient as typeof patient & { lastUpdateBy?: 'doctor' | 'technician' | null };
@@ -381,11 +391,13 @@ export default function page() {
 							<Link key={patient.id} href={`/teknisyen/hastalarim/${patient.id}`}>
 								<Card className={`group h-full justify-between transition-all duration-200 hover:shadow-lg cursor-pointer ${isFullyCompleted
 										? 'border-2 border-gray-600 bg-black/40 hover:border-gray-700 hover:shadow-gray-500'
-										: isKurye
-											? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
-											: isBitim
-												? 'border-2 border-gray-400 bg-gray-100 hover:border-gray-500 hover:shadow-gray-200'
-												: 'border-2 border-orange-300 bg-orange-50/50 hover:border-orange-400 hover:shadow-orange-100'
+										: isPartiallyCompleted
+											? 'border-2 border-amber-400 bg-amber-50/60 hover:border-amber-500 hover:shadow-amber-200'
+											: isKurye
+												? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
+												: isBitim
+													? 'border-2 border-gray-400 bg-gray-100 hover:border-gray-500 hover:shadow-gray-200'
+													: 'border-2 border-orange-300 bg-orange-50/50 hover:border-orange-400 hover:shadow-orange-100'
 									}`}>
 									<CardHeader className="pb-3">
 										<div className="flex items-center justify-between">
@@ -444,6 +456,7 @@ export default function page() {
 										<div className="space-y-2">
 											{prosthesisTypes.length > 0 ? (
 												prosthesisTypes.map(([typeName, data]) => {
+													const isGroupCompleted = data.completedCount === data.count;
 													if (data.pricingType === "JAW_BASED" && data.jaws.length > 0) {
 														const uniqueJaws = Array.from(new Set(data.jaws));
 														const jawLabels = uniqueJaws.map(jaw => jaw === "UPPER" ? "Üst Çene" : jaw === "LOWER" ? "Alt Çene" : jaw);
@@ -459,12 +472,12 @@ export default function page() {
 																	</span>
 																</div>
 																<Badge
-																	className={`text-xs ${isFullyCompleted
+																	className={`text-xs ${isGroupCompleted
 																		? 'bg-gray-800 border-gray-700'
 																		: 'bg-gray-50 border-gray-100'
 																	}`}
 																>
-																	{isFullyCompleted ? "Tamamlandı" : "Devam ediyor"}
+																	{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 																</Badge>
 															</div>
 														);
@@ -481,12 +494,12 @@ export default function page() {
 																	</span>
 																</div>
 																<Badge
-																	className={`text-xs ${isFullyCompleted
+																	className={`text-xs ${isGroupCompleted
 																		? 'bg-gray-800 border-gray-700'
 																		: 'bg-gray-50 border-gray-100'
 																	}`}
 																>
-																	{isFullyCompleted ? "Tamamlandı" : "Devam ediyor"}
+																	{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 																</Badge>
 															</div>
 														);
@@ -507,6 +520,11 @@ export default function page() {
 													<Badge variant="outline" className="text-xs font-medium border-gray-400 text-gray-700 bg-gray-50">
 														<div className="w-2 h-2 rounded-full mr-2 bg-gray-500" />
 														Tamamlandı
+													</Badge>
+												) : isPartiallyCompleted ? (
+													<Badge variant="outline" className="text-xs font-medium border-amber-300 text-amber-800 bg-amber-100">
+														<div className="w-2 h-2 rounded-full mr-2 bg-amber-500" />
+														Kısmen Tamamlandı
 													</Badge>
 												) : isKurye ? (
 													<Badge variant="outline" className="text-xs font-medium border-blue-200 text-blue-700 bg-blue-50">

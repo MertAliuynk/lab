@@ -51,7 +51,7 @@ export async function HistoryHeader({ searchParams }: HistoryHeaderProps) {
 		completed: dentalWorks.filter((work) => work.isCompleted === true).length,
 		ongoing: dentalWorks.filter((work) => work.isCompleted !== true).length,
 		totalCost: dentalWorks
-			.filter((work) => work.patient?.isCompleted)
+			.filter((work) => work.isCompleted)
 			.reduce((sum, work) => {
 				// Protez fiyatı
 				let total = Number(work.totalPrice || work.unitPrice || 0);

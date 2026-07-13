@@ -39,13 +39,7 @@ export const dentalWorkRouter = createTRPCRouter({
 						},
 					}
 				: {}),
-			...(input.onlyCompleted
-				? {
-						patient: {
-							isCompleted: true,
-						},
-					}
-				: {}),
+			...(input.onlyCompleted ? { isCompleted: true } : {}),
 		};
 
 		const dentalWorks = await ctx.db.dentalWork.findMany({

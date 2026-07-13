@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createFeedbackSchema = z.object({
 	patientId: z.string(),
+	dentalWorkId: z.string().optional(),
 	feedbackText: z.string().optional(),
 	laboratoryTechnicianId: z.string().optional(),
 	// 5 puanlama kategorisi (1-5 arası)
@@ -14,6 +15,7 @@ export const createFeedbackSchema = z.object({
 
 export const getFeedbacksSchema = z.object({
 	patientId: z.string(),
+	dentalWorkId: z.string().optional(),
 });
 
 export const deleteFeedbackSchema = z.object({

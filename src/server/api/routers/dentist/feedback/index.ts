@@ -5,31 +5,40 @@ export const feedbackRouter = createTRPCRouter({
 	create: dentistProcedure
 		.input(createFeedbackSchema)
 		.mutation(async ({ ctx, input }) => {
-			// Hastanın bu doktora ait olduğunu ve tamamlandığını kontrol et
 			const patient = await ctx.db.patient.findFirst({
 				where: {
 					id: input.patientId,
 					dentistId: ctx.dentist!.id,
-					isCompleted: true, // Sadece tamamlanmış hastalar için feedback
 					isDeleted: false,
-				},
-				include: {
-					dentalWorks: {
-						include: {
-							laboratoryTechnician: true,
-						},
-					},
 				},
 			});
 
 			if (!patient) {
-				throw new Error("Hasta bulunamadı veya henüz tamamlanmamış");
+				throw new Error("Hasta bulunamadı");
 			}
 
-			// Teknisyen ID'sini belirle - hasta çalışmalarından ilkini al
-			const technicianId = input.laboratoryTechnicianId || 
-				patient.dentalWorks[0]?.laboratoryTechnician?.id || 
-				null;
+			// Belirli bir tedavi için feedback veriliyorsa, o tedavinin tamamlandığını kontrol et
+			let dentalWork: { laboratoryTechnicianId: string | null } | null = null;
+			if (input.dentalWorkId) {
+				dentalWork = await ctx.db.dentalWork.findFirst({
+					where: {
+						id: input.dentalWorkId,
+						patientId: input.patientId,
+						dentistId: ctx.dentist!.id,
+						isCompleted: true,
+						isDeleted: false,
+					},
+					select: {
+						laboratoryTechnicianId: true,
+					},
+				});
+
+				if (!dentalWork) {
+					throw new Error("İşlem bulunamadı veya henüz tamamlanmamış");
+				}
+			}
+
+			const technicianId = input.laboratoryTechnicianId || dentalWork?.laboratoryTechnicianId || null;
 
 			// Normalize feedback text (schema allows optional) to avoid undefined issues during DB write and notification
 			const feedbackText = input.feedbackText ?? "";
@@ -38,6 +47,7 @@ export const feedbackRouter = createTRPCRouter({
 			const feedback = await ctx.db.patientFeedback.create({
 				data: {
 					patientId: input.patientId,
+					dentalWorkId: input.dentalWorkId ?? null,
 					dentistId: ctx.dentist!.id,
 					laboratoryTechnicianId: technicianId,
 					feedbackText: feedbackText,
@@ -141,6 +151,7 @@ export const feedbackRouter = createTRPCRouter({
 					patientId: input.patientId,
 					dentistId: ctx.dentist!.id,
 					isDeleted: false,
+					...(input.dentalWorkId ? { dentalWorkId: input.dentalWorkId } : {}),
 				},
 				include: {
 					dentist: {

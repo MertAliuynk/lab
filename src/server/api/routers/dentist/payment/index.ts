@@ -63,22 +63,14 @@ export const paymentRouter = createTRPCRouter({
 			},
 		});
 
-		// Hekimin sadece tamamlanan hastaların dental work'leri (borç kaynağı)
+		// Hekimin sadece tamamlanan tedavileri (borç kaynağı)
 		const allDentalWorks = await ctx.db.dentalWork.findMany({
 			where: {
 				dentistId: ctx.dentist!.id,
 				isDeleted: false,
-				patient: {
-					isCompleted: true, // Sadece bitim yapılan hastalar
-				},
+				isCompleted: true, // Sadece bitim yapılan tedaviler
 			},
 			include: {
-				patient: {
-					select: {
-						isCompleted: true,
-						completedAt: true,
-					},
-				},
 				dentalWorkAdditionalTreatments: true,
 			},
 		});

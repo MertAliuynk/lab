@@ -25,10 +25,7 @@ export const paymentRouter = createTRPCRouter({
 						   dentalWorks: {
 							   where: {
 								   isDeleted: false,
-								   patient: {
-									   // @ts-ignore - Patient isCompleted field exists but TS types not updated
-									   isCompleted: true,
-								   },
+								   isCompleted: true,
 							   },
 							   select: {
 								   totalPrice: true,
@@ -137,10 +134,7 @@ export const paymentRouter = createTRPCRouter({
 						   dentalWorks: {
 							   where: {
 								   isDeleted: false,
-								   patient: {
-									   // @ts-ignore - Patient isCompleted field exists but TS types not updated
-									   isCompleted: true,
-								   },
+								   isCompleted: true,
 							   },
 							   include: {
 								   patient: {
@@ -280,10 +274,7 @@ export const paymentRouter = createTRPCRouter({
 				   dentalWorks: {
 					   where: {
 						   isDeleted: false,
-						   patient: {
-							   // @ts-ignore - Patient isCompleted field exists but TS types not updated
-							   isCompleted: true,
-						   },
+						   isCompleted: true,
 					   },
 					   include: {
 						   patient: {
@@ -408,7 +399,7 @@ export const paymentRouter = createTRPCRouter({
 						dentalWorks: {
 							where: {
 								isDeleted: false,
-								patient: { isCompleted: true },
+								isCompleted: true,
 							},
 							select: { totalPrice: true, unitPrice: true },
 						},
@@ -425,7 +416,7 @@ export const paymentRouter = createTRPCRouter({
 						dentalWorks: {
 							where: {
 								isDeleted: false,
-								patient: { isCompleted: true },
+								isCompleted: true,
 							},
 							select: { totalPrice: true, unitPrice: true },
 						},

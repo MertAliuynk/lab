@@ -141,7 +141,7 @@ export const dailyCashBoxRouter = createTRPCRouter({
 				   dentalWorks: {
 					   where: {
 						   isDeleted: false,
-						   patient: { isCompleted: true },
+						   isCompleted: true,
 					   },
 					   select: {
 						   totalPrice: true,

@@ -1,5 +1,6 @@
 
 import { createTRPCRouter, dentistProcedure } from "@/server/api/trpc";
+import { recomputePatientCompletion } from "@/server/api/routers/_shared/patient-completion";
 import { getMyPatientsSchema, getPatientByIdSchema, updatePatientNotesSchema, markAsCompletedSchema, markAsOngoingSchema, sendToTechnicianSchema } from "./schema";
 
 export const patientRouter = createTRPCRouter({
@@ -145,107 +146,74 @@ export const patientRouter = createTRPCRouter({
 	}),
 
 	markAsCompleted: dentistProcedure.input(markAsCompletedSchema).mutation(async ({ ctx, input }) => {
-		// Önce hastanın bu doktora ait olduğunu kontrol et
-		const patient = await ctx.db.patient.findFirst({
+		// Önce tedavinin bu doktora ait olduğunu kontrol et
+		const dentalWork = await ctx.db.dentalWork.findFirst({
 			where: {
-				id: input.id,
+				id: input.dentalWorkId,
 				dentistId: ctx.dentist!.id,
-			},
-			include: {
-				dentalWorks: {
-					where: {
-						isDeleted: false,
-					},
-					include: {
-						prosthesisType: true,
-						dentist: true,
-					},
-				},
+				isDeleted: false,
 			},
 		});
 
-		if (!patient) {
-			throw new Error("Hasta bulunamadı veya bu hastaya erişim yetkiniz yok");
+		if (!dentalWork) {
+			throw new Error("İşlem bulunamadı veya bu hastaya erişim yetkiniz yok");
 		}
 
-		// Hasta tamamlandı olarak işaretle
-		const updatedPatient = await ctx.db.patient.update({
-			where: { id: input.id },
+		const updatedDentalWork = await ctx.db.dentalWork.update({
+			where: { id: dentalWork.id },
 			data: {
 				isCompleted: true,
-				completedAt: new Date(),
 			},
 		});
 
-		// Tüm dental work'ler için hem bitim kaydı ekle hem de isCompleted alanını güncelle
-		for (const dentalWork of patient.dentalWorks) {
-			await ctx.db.dentalWork.update({
-				where: { id: dentalWork.id },
-				data: {
-					isCompleted: true,
-				},
-			});
-			await ctx.db.stageHistory.create({
-				data: {
-					dentalWorkId: dentalWork.id,
-					prosthesisStageId: null, // Özel durum: bitim kaydı
-					notes: "BITIM_YAPILDI", // Özel işaretleyici
-					dentistId: ctx.dentist!.id,
-				},
-			});
-		}
+		await ctx.db.stageHistory.create({
+			data: {
+				dentalWorkId: dentalWork.id,
+				prosthesisStageId: null, // Özel durum: bitim kaydı
+				notes: "BITIM_YAPILDI", // Özel işaretleyici
+				dentistId: ctx.dentist!.id,
+			},
+		});
 
-		return updatedPatient;
+		// Hastanın tüm tedavileri bitti mi diye kontrol edip hasta durumunu güncelle
+		await recomputePatientCompletion(dentalWork.patientId);
+
+		return updatedDentalWork;
 	}),
 
 	markAsOngoing: dentistProcedure.input(markAsOngoingSchema).mutation(async ({ ctx, input }) => {
-		// Önce hastanın bu doktora ait olduğunu kontrol et
-		const patient = await ctx.db.patient.findFirst({
+		// Önce tedavinin bu doktora ait olduğunu kontrol et
+		const dentalWork = await ctx.db.dentalWork.findFirst({
 			where: {
-				id: input.id,
+				id: input.dentalWorkId,
 				dentistId: ctx.dentist!.id,
-			},
-			include: {
-				dentalWorks: {
-					where: {
-						isDeleted: false,
-					},
-				},
+				isDeleted: false,
 			},
 		});
 
-		if (!patient) {
-			throw new Error("Hasta bulunamadı veya bu hastaya erişim yetkiniz yok");
+		if (!dentalWork) {
+			throw new Error("İşlem bulunamadı veya bu hastaya erişim yetkiniz yok");
 		}
 
-		// Hastayı devam eden duruma al
-		const updatedPatient = await ctx.db.patient.update({
-			where: { id: input.id },
+		const updatedDentalWork = await ctx.db.dentalWork.update({
+			where: { id: dentalWork.id },
 			data: {
 				isCompleted: false,
-				completedAt: null,
 			},
 		});
 
-		// Bitim kayıtlarını sil ve dental work'leri devam eden duruma al
-		for (const dentalWork of patient.dentalWorks) {
-			await ctx.db.dentalWork.update({
-				where: { id: dentalWork.id },
-				data: {
-					isCompleted: false,
-				},
-			});
+		await ctx.db.stageHistory.deleteMany({
+			where: {
+				dentalWorkId: dentalWork.id,
+				notes: "BITIM_YAPILDI",
+				dentistId: ctx.dentist!.id,
+			},
+		});
 
-			await ctx.db.stageHistory.deleteMany({
-				where: {
-					dentalWorkId: dentalWork.id,
-					notes: "BITIM_YAPILDI",
-					dentistId: ctx.dentist!.id,
-				},
-			});
-		}
+		// Hastanın tüm tedavileri bitti mi diye kontrol edip hasta durumunu güncelle
+		await recomputePatientCompletion(dentalWork.patientId);
 
-		return updatedPatient;
+		return updatedDentalWork;
 	}),
 
 });

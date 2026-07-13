@@ -5,6 +5,7 @@ import EditProsthesisSheet from "@/components/edit-prosthesis-sheet";
 import PatientNotesList from "@/components/patient-notes-list";
 import AddDentistProsthesis from "@/components/add-dentist-prosthesis";
 import DentistPatientCompletion from "@/components/dentist-patient-completion";
+import PatientFeedback from "@/components/patient-feedback";
 import { Badge } from "@/components/ui/badge";
 import AdditionalTreatmentListReadonly from "@/components/additional-treatment-list-readonly";
 import { Button } from "@/components/ui/button";
@@ -302,9 +303,6 @@ export default async function page({ params }: PageProps) {
 									<p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">{patient.notes}</p>
 								</div>
 							)}
-
-							{/* Bitim Yap Butonu */}
-							<DentistPatientCompletion patient={patient} />
 						</CardContent>
 					</Card>
 
@@ -422,10 +420,10 @@ export default async function page({ params }: PageProps) {
 										const latestWork = group.works[0];
 										if (!latestWork) return null;
 
-										// Hasta bitimi yapıldıysa mevcut aşama 'Bitim Yapıldı' olarak göster
-										const isPatientCompleted = patient.isCompleted;
+										// Bu tedavinin bitimi yapıldıysa mevcut aşama 'Bitim Yapıldı' olarak göster
+										const isWorkCompleted = latestWork.isCompleted;
 										const latestStageForWork = latestStageInfoMap.get(latestWork.id);
-										const currentStageName = isPatientCompleted
+										const currentStageName = isWorkCompleted
 											? "Bitim Yapıldı"
 											: (latestStageForWork?.name || group.latestStage);
 										const stageColor = getStageColor(currentStageName);
@@ -452,6 +450,22 @@ export default async function page({ params }: PageProps) {
 													dentalWorkId={latestWork.id}
 													currentDeliveryDate={latestWork.deliveryDate}
 												/>
+
+												{/* Bitim Yap - bu tedaviye özel */}
+												<DentistPatientCompletion
+													dentalWork={{ id: latestWork.id, isCompleted: latestWork.isCompleted }}
+												/>
+
+												{latestWork.isCompleted && (
+													<PatientFeedback
+														data-prevent-navigation
+														patientId={patient.id}
+														patientName={patient.name}
+														dentalWorkId={latestWork.id}
+														dentalWorkTitle={type}
+														dentalWorkIsCompleted={latestWork.isCompleted}
+													/>
+												)}
 
 												{/* Ek Tedaviler - Readonly */}
 												<AdditionalTreatmentListReadonly treatments={latestWork.dentalWorkAdditionalTreatments || []} />
