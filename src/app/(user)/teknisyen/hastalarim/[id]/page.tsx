@@ -56,6 +56,8 @@ const getStageProgress = (percentage: number | undefined) => {
 	return percentage || 0;
 };
 
+const KURYE_NOTES = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
+
 const getStageColor = (stageName: string) => {
 	const colors = {
 		"Sipariş Alındı": "bg-blue-500",
@@ -91,6 +93,12 @@ export default function page() {
 		api.laboratoryTechnician.patient.getDentalWorks.useQuery({
 			patientId: patientId,
 		}) as { data: Array<RouterOutputs["laboratoryTechnician"]["patient"]["getDentalWorks"][0] & { dentalWorkAdditionalTreatments?: any[] }>, isLoading: boolean };
+
+	// Hasta en son kuryeye/doktora verilmiş mi (bitim yapılmış olsa bile ayrı bir durumdur)
+	const latestDentalWork = dentalWorks[0];
+	const isAlreadySentToCourier = Boolean(
+		latestDentalWork && typeof latestDentalWork.notes === "string" && KURYE_NOTES.includes(latestDentalWork.notes),
+	);
 
 	// Kuryeye Ver için teknisyen aşaması güncelleme mutation
 	const updateTechnicianStageMutation = api.laboratoryTechnician.dentalWork.updateTechnicianStage.useMutation({
@@ -317,8 +325,8 @@ export default function page() {
 								</div>
 							)}
 
-													{/* Tekrar doktora/kuryeye ver butonu */}
-													{!patient.isCompleted && (
+													{/* Tekrar doktora/kuryeye ver butonu - tüm tedaviler bitse (isCompleted) dahi henüz kuryeye verilmediyse gösterilmeli */}
+													{!isAlreadySentToCourier && (
 														<div className="pt-4 border-t">
 															<AlertDialog>
 																<AlertDialogTrigger asChild>
@@ -341,7 +349,6 @@ export default function page() {
 																		<AlertDialogCancel>İptal</AlertDialogCancel>
 																		<AlertDialogAction
 																			onClick={() => {
-																				const latestDentalWork = dentalWorks[0];
 																				if (!latestDentalWork) return;
 																				updateTechnicianStageMutation.mutate({
 																					dentalWorkId: latestDentalWork.id,
