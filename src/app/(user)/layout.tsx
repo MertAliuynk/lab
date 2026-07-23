@@ -128,6 +128,11 @@ export default async function Page({
 			url: "/hekim/gecmis-islemlerim",
 			icon: "History",
 		},
+		{
+			title: "İşlem Takvimi",
+			url: "/hekim/takvim",
+			icon: "Calendar",
+		},
 	];
 
 	const technicianNavMain = [

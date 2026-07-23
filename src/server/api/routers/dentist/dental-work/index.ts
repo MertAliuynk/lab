@@ -9,6 +9,7 @@ import {
 	deleteStageHistorySchema,
 	getByIdSchema,
 	getClinicPricesForProsthesisTypesSchema,
+	getDentalWorksByDeliveryDateSchema,
 	getDentalWorksByPatientIdSchema,
 	getDentalWorksSchema,
 	getStageHistorySchema,
@@ -118,6 +119,68 @@ export const dentalWorkRouter = createTRPCRouter({
 		});
 
 		return dentalWorks;
+	}),
+
+	getByDeliveryDate: dentistProcedure.input(getDentalWorksByDeliveryDateSchema).query(async ({ ctx, input }) => {
+		if (!ctx.dentist) {
+			throw new TRPCError({
+				code: "UNAUTHORIZED",
+				message: "Doktor bilgisi bulunamadı",
+			});
+		}
+
+		const { date, page, perPage } = input;
+		const skip = (page - 1) * perPage;
+
+		const startOfDay = new Date(date);
+		startOfDay.setHours(0, 0, 0, 0);
+
+		const endOfDay = new Date(date);
+		endOfDay.setHours(23, 59, 59, 999);
+
+		const where = {
+			isDeleted: false,
+			dentistId: ctx.dentist.id,
+			deliveryDate: {
+				gte: startOfDay,
+				lt: endOfDay,
+			},
+		};
+
+		const [dentalWorks, total] = await Promise.all([
+			ctx.db.dentalWork.findMany({
+				where,
+				include: {
+					patient: true,
+					prosthesisType: true,
+					prosthesisStage: true,
+					toothColor: true,
+					laboratoryTechnician: {
+						include: {
+							user: {
+								select: {
+									name: true,
+								},
+							},
+						},
+					},
+				},
+				orderBy: [{ deliveryDate: "asc" }, { createdAt: "desc" }],
+				skip,
+				take: perPage,
+			}),
+			ctx.db.dentalWork.count({ where }),
+		]);
+
+		return {
+			dentalWorks,
+			pagination: {
+				page,
+				perPage,
+				total,
+				totalPages: Math.ceil(total / perPage),
+			},
+		};
 	}),
 
 	getStageHistory: dentistProcedure.input(getStageHistorySchema).query(async ({ ctx, input }) => {

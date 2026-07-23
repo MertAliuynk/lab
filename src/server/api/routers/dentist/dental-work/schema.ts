@@ -13,6 +13,12 @@ export const getDentalWorksByPatientIdSchema = z.object({
 	patientId: z.string(),
 });
 
+export const getDentalWorksByDeliveryDateSchema = z.object({
+	date: z.date(),
+	page: z.number().optional().default(1),
+	perPage: z.number().optional().default(20),
+});
+
 export const getStageHistorySchema = z.object({
 	dentalWorkId: z.string(),
 });
