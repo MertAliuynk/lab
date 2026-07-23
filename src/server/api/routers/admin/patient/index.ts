@@ -214,13 +214,6 @@ export const patientRouter = createTRPCRouter({
 				id,
 				isDeleted: false,
 			},
-			include: {
-				dentalWorks: {
-					where: {
-						isDeleted: false,
-					},
-				},
-			},
 		});
 
 		if (!patient) {
@@ -230,19 +223,23 @@ export const patientRouter = createTRPCRouter({
 			});
 		}
 
-		if (patient.dentalWorks.length > 0) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Bu hastaya ait dental işlemler bulunmaktadır. Lütfen önce işlemleri silin.",
-			});
-		}
-
-		await ctx.db.patient.update({
-			where: { id },
-			data: {
-				isDeleted: true,
-			},
-		});
+		await ctx.db.$transaction([
+			ctx.db.dentalWork.updateMany({
+				where: {
+					patientId: id,
+					isDeleted: false,
+				},
+				data: {
+					isDeleted: true,
+				},
+			}),
+			ctx.db.patient.update({
+				where: { id },
+				data: {
+					isDeleted: true,
+				},
+			}),
+		]);
 
 		return true;
 	}),

@@ -124,7 +124,11 @@ export default function add_technician_prothesis_sheet() {
 
     useEffect(() => {
         if (existingDentalWorks) {
-            const existingTypes = [...new Set(existingDentalWorks.map((work) => work.prosthesisTypeId))];
+            // Sadece devam eden (henüz tamamlanmamış) tedavilerin tipi tekrar seçilemesin;
+            // tamamlanmış bir protez tipi hastaya tekrar eklenebilmeli
+            const existingTypes = [
+                ...new Set(existingDentalWorks.filter((work) => !work.isCompleted).map((work) => work.prosthesisTypeId)),
+            ];
             const currentGroupTypes = toothGroups.map((group) => group.prosthesisType);
             setUsedProsthesisTypes([...existingTypes, ...currentGroupTypes]);
         } else {
@@ -265,7 +269,9 @@ export default function add_technician_prothesis_sheet() {
 
     const getUsedTypesExcludingGroup = (excludeIndex: number) => {
         if (existingDentalWorks) {
-            const existingTypes = [...new Set(existingDentalWorks.map((work) => work.prosthesisTypeId))];
+            const existingTypes = [
+                ...new Set(existingDentalWorks.filter((work) => !work.isCompleted).map((work) => work.prosthesisTypeId)),
+            ];
             const currentGroupTypes = toothGroups
                 .filter((_, index) => index !== excludeIndex)
                 .map((group) => group.prosthesisType);

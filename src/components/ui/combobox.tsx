@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
 
 import Spinner from "@/components/spinner";
@@ -64,6 +64,14 @@ export function Combobox({
 		onChange(isAllSelected ? [] : allIds);
 	};
 
+	const hasValue = multiSelect ? Array.isArray(value) && value.length > 0 : value !== null && value !== undefined && value !== "";
+
+	const handleClear = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		onChange(multiSelect ? [] : "");
+	};
+
 	return (
 		<div className="flex items-center gap-1">
 			<Popover open={open} onOpenChange={setOpen}>
@@ -125,6 +133,18 @@ export function Combobox({
 					</Command>
 				</PopoverContent>
 			</Popover>
+			{hasValue && !isDisabled && (
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					className="h-9 w-9 shrink-0"
+					onClick={handleClear}
+					aria-label="Seçimi temizle"
+				>
+					<X className="h-4 w-4" />
+				</Button>
+			)}
 		</div>
 	);
 }
