@@ -78,7 +78,7 @@ export default function DailyCashBoxPage() {
 	const deleteIncomeMutation = api.admin.dailyCashBox.deleteIncome.useMutation({
 		onSuccess: () => {
 			toast.success("Gelir başarıyla silindi");
-			refetch();
+			handleRefresh();
 			setShowDeleteDialog(false);
 		},
 		onError: (error) => {
@@ -89,7 +89,7 @@ export default function DailyCashBoxPage() {
 	const deleteExpenseMutation = api.admin.dailyCashBox.deleteExpense.useMutation({
 		onSuccess: () => {
 			toast.success("Gider başarıyla silindi");
-			refetch();
+			handleRefresh();
 			setShowDeleteDialog(false);
 		},
 		onError: (error) => {

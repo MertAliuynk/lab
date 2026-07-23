@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/trpc/react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { parseAsString, useQueryState } from "nuqs";
 import { useState } from "react";
 import { PatientList } from "./patient-list";
@@ -11,9 +12,14 @@ export function PatientListContainer() {
 	const [statusFilter, setStatusFilter] = useState<"all" | "ongoing" | "completed">("ongoing");
 	const [locationFilter, setLocationFilter] = useState<"all" | "at_doctor" | "at_technician">("all");
 
-	const { data: patients = [], isLoading } = api.dentist.patient.getMy.useQuery({
-		name: searchQuery || undefined,
-	});
+	const { data: patients = [], isLoading } = api.dentist.patient.getMy.useQuery(
+		{
+			name: searchQuery || undefined,
+		},
+		{
+			placeholderData: keepPreviousData,
+		},
+	);
 
 	const handleStatusChange = (status: "all" | "ongoing" | "completed") => {
 		setStatusFilter(status);

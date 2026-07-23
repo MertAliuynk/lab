@@ -55,12 +55,11 @@ export async function HistoryHeader({ searchParams }: HistoryHeaderProps) {
 			.reduce((sum, work) => {
 				// Protez fiyatı
 				let total = Number(work.totalPrice || work.unitPrice || 0);
-				// Ek tedavi fiyatları (adet ile çarpılır)
+				// Ek tedavi fiyatları (fiyat zaten adet dahil toplam olarak kaydedilir)
 				if (work.dentalWorkAdditionalTreatments?.length) {
 					total += work.dentalWorkAdditionalTreatments.reduce((addSum, add) => {
 						const price = Number(add.price) || 0;
-						const quantity = add.quantity || 1;
-						return addSum + price * quantity;
+						return addSum + price;
 					}, 0);
 				}
 				return sum + total;

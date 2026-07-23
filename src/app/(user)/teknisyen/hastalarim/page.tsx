@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCompletionState } from "@/lib/patient-completion";
 import { api } from "@/trpc/react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { Activity, ArrowRight, Calendar, CheckCircle2, Search, User, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
@@ -39,9 +40,14 @@ export default function page() {
 	const [locationFilter, setLocationFilter] = useState<"all" | "at_doctor" | "at_technician">("all");
 	const [dentistFilter, setDentistFilter] = useState<string>("all");
 
-	const { data: patients = [], isLoading } = api.laboratoryTechnician.patient.getAll.useQuery({
-		name: searchQuery || undefined,
-	});
+	const { data: patients = [], isLoading } = api.laboratoryTechnician.patient.getAll.useQuery(
+		{
+			name: searchQuery || undefined,
+		},
+		{
+			placeholderData: keepPreviousData,
+		},
+	);
 
 	const { data: allDentalWorks = [] } = api.laboratoryTechnician.dentalWork.getAll.useQuery({});
 
@@ -136,9 +142,14 @@ export default function page() {
 	});
 
 	const totalPatients = filteredPatients.length;
-	const totalDentalWorks = allDentalWorks.length;
-	const completedWorks = allDentalWorks.filter((work) => work.isCompleted).length;
-	const pendingWorks = totalDentalWorks - completedWorks;
+	const totalActivePatients = patients.filter((patient) => !(patient as typeof patient & { isCompleted?: boolean }).isCompleted).length;
+	const pendingWorks = allDentalWorks.filter((work) => {
+		if (work.isCompleted) return false;
+		const kuryeNotes = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
+		if (typeof (work as any).notes === "string" && kuryeNotes.includes((work as any).notes)) return false;
+		if (work.prosthesisStage && typeof work.prosthesisStage.name === "string" && kuryeNotes.includes(work.prosthesisStage.name)) return false;
+		return true;
+	}).length;
 
 	return (
 		<div className="space-y-6">
@@ -235,8 +246,8 @@ export default function page() {
 								<div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
 									<Activity className="w-8 h-8 text-white" />
 								</div>
-								<div className="text-3xl font-bold text-teal-700 mb-1">{totalDentalWorks}</div>
-								<div className="text-sm text-teal-600 font-medium">Toplam İş</div>
+								<div className="text-3xl font-bold text-teal-700 mb-1">{totalActivePatients}</div>
+								<div className="text-sm text-teal-600 font-medium">Toplam Aktif Hasta</div>
 								<div className="w-full h-1 bg-teal-200 rounded-full mt-3">
 									<div className="h-1 bg-gradient-to-r from-teal-400 to-cyan-600 rounded-full w-full" />
 								</div>
@@ -387,12 +398,30 @@ export default function page() {
 							}
 						}
 
+						// Kısmen tamamlanmış hastalarda, tamamlanmamış tedavi(ler) kimdeyse (doktorda/teknisyende) o rengi göster
+						let partialLocation: 'doctor' | 'technician' | null = null;
+						if (isPartiallyCompleted && patient.dentalWorks) {
+							const isDoctorWork = (work: (typeof patient.dentalWorks)[number]) => {
+								if (typeof (work as any).notes === 'string' && kuryeNotes.includes((work as any).notes)) return true;
+								if (work.prosthesisStage && typeof work.prosthesisStage.name === 'string' && kuryeNotes.includes(work.prosthesisStage.name)) return true;
+								return false;
+							};
+							const incompleteWorks = patient.dentalWorks.filter((work) => !work.isCompleted);
+							if (incompleteWorks.some((work) => !isDoctorWork(work))) {
+								partialLocation = 'technician';
+							} else if (incompleteWorks.some(isDoctorWork)) {
+								partialLocation = 'doctor';
+							}
+						}
+
 						return (
 							<Link key={patient.id} href={`/teknisyen/hastalarim/${patient.id}`}>
 								<Card className={`group h-full justify-between transition-all duration-200 hover:shadow-lg cursor-pointer ${isFullyCompleted
 										? 'border-2 border-gray-600 bg-black/40 hover:border-gray-700 hover:shadow-gray-500'
 										: isPartiallyCompleted
-											? 'border-2 border-amber-400 bg-amber-50/60 hover:border-amber-500 hover:shadow-amber-200'
+											? partialLocation === 'doctor'
+												? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
+												: 'border-2 border-orange-300 bg-orange-50/50 hover:border-orange-400 hover:shadow-orange-100'
 											: isKurye
 												? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
 												: isBitim
@@ -522,10 +551,23 @@ export default function page() {
 														Tamamlandı
 													</Badge>
 												) : isPartiallyCompleted ? (
-													<Badge variant="outline" className="text-xs font-medium border-amber-300 text-amber-800 bg-amber-100">
-														<div className="w-2 h-2 rounded-full mr-2 bg-amber-500" />
-														Kısmen Tamamlandı
-													</Badge>
+													<div className="flex flex-col items-center gap-2">
+														<Badge variant="outline" className="text-xs font-medium border-amber-300 text-amber-800 bg-amber-100">
+															<div className="w-2 h-2 rounded-full mr-2 bg-amber-500" />
+															Kısmen Tamamlandı
+														</Badge>
+														{partialLocation === 'doctor' ? (
+															<Badge variant="outline" className="text-xs font-medium border-blue-200 text-blue-700 bg-blue-50">
+																<div className="w-2 h-2 rounded-full mr-2 bg-blue-500" />
+																Doktorda
+															</Badge>
+														) : (
+															<Badge variant="outline" className="text-xs font-medium border-orange-200 text-orange-700 bg-orange-50">
+																<div className="w-2 h-2 rounded-full mr-2 bg-orange-500" />
+																Teknisyende
+															</Badge>
+														)}
+													</div>
 												) : isKurye ? (
 													<Badge variant="outline" className="text-xs font-medium border-blue-200 text-blue-700 bg-blue-50">
 														<div className="w-2 h-2 rounded-full mr-2 bg-blue-500" />

@@ -54,10 +54,6 @@ export default function ClinicPaymentClient({ paymentDetail, clinicId }: Props) 
 		router.push("/admin/payment");
 	};
 
-	const handleViewDentistDetails = (dentistId: string) => {
-		router.push(`/admin/payment/clinic/${dentistId}`);
-	};
-
 	const handleTransferSuccess = () => {
 		// Sayfayı yenile - gerçek uygulamada router.refresh() kullanılabilir
 		setRefreshKey(prev => prev + 1);
@@ -185,24 +181,6 @@ export default function ClinicPaymentClient({ paymentDetail, clinicId }: Props) 
 							</div>
 						</div>
 
-						<div className="hidden md:block w-12 h-12 relative">
-							<div className="absolute inset-0 border-t-2 border-r-2 border-gray-300/50 rounded-tr-full" />
-							<div className="absolute top-1/2 left-1/2 w-2 h-2 bg-gradient-to-r from-red-400 to-blue-400 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
-						</div>
-
-						<div className="group relative">
-							<div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full opacity-20 group-hover:opacity-30 transition-all duration-300 blur-xl" />
-							<div className="relative bg-white/70 backdrop-blur-sm border border-blue-200/50 rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-								<div className="text-3xl font-bold text-blue-700 mb-1">{summary.paymentRate}%</div>
-								<div className="text-sm text-blue-600 font-medium">Ödeme Oranı</div>
-								<div className="w-full h-1 bg-blue-200 rounded-full mt-3">
-									<div
-										className="h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
-										style={{ width: `${summary.paymentRate}%` }}
-									/>
-								</div>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -227,9 +205,6 @@ export default function ClinicPaymentClient({ paymentDetail, clinicId }: Props) 
 										<p className="font-medium">{formatCurrency(dentist.remainingDebt)}</p>
 										<p className="text-sm text-gray-600">Kalan Borç</p>
 									</div>
-									<Button onClick={() => handleViewDentistDetails(dentist.id)} variant="outline" size="sm">
-										Detay
-									</Button>
 								</div>
 							))}
 						</div>

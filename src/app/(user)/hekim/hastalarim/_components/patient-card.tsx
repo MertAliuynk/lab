@@ -151,6 +151,22 @@ export function PatientCard({ patient }: PatientCardProps) {
 		return false;
 	})();
 
+	// Kısmen tamamlanmış hastalarda, tamamlanmamış tedavi(ler) kimdeyse (doktorda/teknisyende) o rengi göster
+	const partialLocation: 'doctor' | 'technician' | null = (() => {
+		if (!isPartiallyCompleted || !patient.dentalWorks) return null;
+		const kuryeNotes = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
+		const isDoctorWork = (work: DentalWork) => {
+			if (typeof work.notes === 'string' && kuryeNotes.includes(work.notes)) return true;
+			if (work.prosthesisStage && typeof work.prosthesisStage.name === 'string' && kuryeNotes.includes(work.prosthesisStage.name)) return true;
+			return false;
+		};
+		const incompleteWorks = patient.dentalWorks.filter((work) => !work.isCompleted);
+		// Birden fazla tamamlanmamış tedavi farklı yerlerdeyse teknisyen önceliklidir
+		if (incompleteWorks.some((work) => !isDoctorWork(work))) return 'technician';
+		if (incompleteWorks.some(isDoctorWork)) return 'doctor';
+		return null;
+	})();
+
 	const handleCardClick = (e: React.MouseEvent) => {
 		// Feedback butonuna tıklandığında card linkini engellemek için
 		const target = e.target as HTMLElement;
@@ -165,7 +181,9 @@ export function PatientCard({ patient }: PatientCardProps) {
 					isFullyCompleted
 						? 'border-2 border-gray-600 bg-black/40 hover:border-gray-700 hover:shadow-gray-500'
 						: isPartiallyCompleted
-						? 'border-2 border-amber-400 bg-amber-50/60 hover:border-amber-500 hover:shadow-amber-200'
+						? partialLocation === 'doctor'
+							? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
+							: 'border-2 border-orange-300 bg-orange-50/50 hover:border-orange-400 hover:shadow-orange-100'
 						: lastStageKurye
 						? 'border-2 border-blue-300 bg-blue-50/50 hover:border-blue-400 hover:shadow-blue-100'
 						: lastStageBitim
@@ -359,7 +377,7 @@ export function PatientCard({ patient }: PatientCardProps) {
 				{/* Lokasyon Badge - Sadece devam eden hastalar için */}
 								{/* Bazı tedaviler tamamlanmış bazıları devam ediyorsa "Kısmen Tamamlandı" etiketi göster */}
 								{isPartiallyCompleted && (
-									<div className="mt-3 pt-3 border-t border-gray-100">
+									<div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
 										<div className="flex items-center justify-center">
 											<Badge
 												variant="outline"
@@ -368,6 +386,25 @@ export function PatientCard({ patient }: PatientCardProps) {
 												<div className="w-2 h-2 rounded-full mr-2 bg-amber-500"/>
 												Kısmen Tamamlandı
 											</Badge>
+										</div>
+										<div className="flex items-center justify-center">
+											{partialLocation === 'doctor' ? (
+												<Badge
+													variant="outline"
+													className="text-xs font-medium border-blue-200 text-blue-700 bg-blue-50"
+												>
+													<div className="w-2 h-2 rounded-full mr-2 bg-blue-500"/>
+													Doktorda
+												</Badge>
+											) : (
+												<Badge
+													variant="outline"
+													className="text-xs font-medium border-orange-200 text-orange-700 bg-orange-50"
+												>
+													<div className="w-2 h-2 rounded-full mr-2 bg-orange-500"/>
+													Teknisyende
+												</Badge>
+											)}
 										</div>
 									</div>
 								)}

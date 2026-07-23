@@ -1,7 +1,6 @@
 
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/trpc/react";
 import { useState } from "react";
@@ -51,13 +50,9 @@ export default function BalancePage() {
           <div className="flex flex-col items-center gap-4">
             <div className="text-base sm:text-lg font-semibold">Klinik Toplam Borç</div>
             <div className="text-2xl sm:text-3xl font-bold text-red-600">₺{summary ? Number(summary.remainingDebt).toLocaleString("tr-TR") : "-"}</div>
-            <div className="w-full max-w-md">
-              <Progress value={summary?.paymentRate || 0} className="h-2" color={summary?.paymentRate === 100 ? "green" : "primary"} />
-              <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 mt-1 gap-1 sm:gap-0">
-                <span>Ödenen: ₺{summary ? Number(summary.totalReceived).toLocaleString("tr-TR") : "-"}</span>
-                <span>Borç: ₺{summary ? Number(summary.totalDebt).toLocaleString("tr-TR") : "-"}</span>
-                <span>%{summary?.paymentRate || 0} ödendi</span>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 gap-1 sm:gap-4">
+              <span>Ödenen: ₺{summary ? Number(summary.totalReceived).toLocaleString("tr-TR") : "-"}</span>
+              <span>Borç: ₺{summary ? Number(summary.totalDebt).toLocaleString("tr-TR") : "-"}</span>
             </div>
           </div>
         </CardContent>
@@ -84,9 +79,7 @@ export default function BalancePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <div className="text-xs text-gray-500">Ödenen: ₺{Number(dentist.totalReceived).toLocaleString("tr-TR")}</div>
                   <div className="text-xs text-gray-500">Borç: ₺{Number(dentist.totalDebt).toLocaleString("tr-TR")}</div>
-                  <div className="text-xs text-gray-500">%{dentist.paymentRate} ödendi</div>
                 </div>
-                <Progress value={dentist.paymentRate} className="h-1.5 mt-2" color={dentist.paymentRate === 100 ? "green" : "primary"} />
               </div>
             </CardContent>
           </Card>

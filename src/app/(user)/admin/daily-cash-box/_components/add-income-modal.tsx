@@ -154,7 +154,7 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 		? dentists?.filter((dentist) => dentist.clinicId === selectedClinicId)
 		: dentists;
 
-	// Seçili şubenin toplam borç/alacak durumu
+	// seçili şubenin borç kısmı burda bu hekimlerdeki gibi parantezdede yazmalı daha seçmeden önce 
 	const clinicDebtText = (() => {
 		if (!selectedClinicId || !clinicPaymentDetail) return null;
 		const remainingDebt = clinicPaymentDetail.summary.remainingDebt;

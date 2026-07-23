@@ -82,8 +82,7 @@ export const paymentRouter = createTRPCRouter({
 			if (work.dentalWorkAdditionalTreatments?.length) {
 				workTotal += work.dentalWorkAdditionalTreatments.reduce((addSum, add) => {
 					const price = Number(add.price) || 0;
-					const quantity = add.quantity || 1;
-					return addSum + price * quantity;
+					return addSum + price;
 				}, 0);
 			}
 			return sum + workTotal;

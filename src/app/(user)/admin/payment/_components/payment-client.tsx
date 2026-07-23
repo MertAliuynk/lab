@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/format";
 import { ArrowRight, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -54,42 +53,6 @@ export default function PaymentClient({ paymentSummary, totalStats }: Props) {
 								<div className="text-sm text-blue-600 font-medium">Toplam Klinik</div>
 								<div className="w-full h-1 bg-blue-200 rounded-full mt-3">
 									<div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full w-full" />
-								</div>
-							</div>
-						</div>
-
-						<div className="hidden md:block w-12 h-12 relative">
-							<div className="absolute inset-0 border-t-2 border-r-2 border-gray-300/50 rounded-tr-full" />
-							<div className="absolute top-1/2 left-1/2 w-2 h-2 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
-						</div>
-
-						<div className="group relative">
-							<div className="absolute -inset-4 bg-gradient-to-r from-emerald-400 to-green-600 rounded-full opacity-20 group-hover:opacity-30 transition-all duration-300 blur-xl" />
-							<div className="relative bg-white/70 backdrop-blur-sm border border-emerald-200/50 rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-								<div className="text-3xl font-bold text-emerald-700 mb-1">
-									{formatCurrency(totalStats?.totalReceived || 0)}
-								</div>
-								<div className="text-sm text-emerald-600 font-medium">Alınan Toplam</div>
-								<div className="w-full h-1 bg-emerald-200 rounded-full mt-3">
-									<div className="h-1 bg-gradient-to-r from-emerald-400 to-green-600 rounded-full w-full" />
-								</div>
-							</div>
-						</div>
-
-						<div className="hidden md:block w-12 h-12 relative">
-							<div className="absolute inset-0 border-t-2 border-r-2 border-gray-300/50 rounded-tr-full" />
-							<div className="absolute top-1/2 left-1/2 w-2 h-2 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
-						</div>
-
-						<div className="group relative">
-							<div className="absolute -inset-4 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full opacity-20 group-hover:opacity-30 transition-all duration-300 blur-xl" />
-							<div className="relative bg-white/70 backdrop-blur-sm border border-orange-200/50 rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-								<div className="text-3xl font-bold text-orange-700 mb-1">
-									{formatCurrency(totalStats?.totalDebt || 0)}
-								</div>
-								<div className="text-sm text-orange-600 font-medium">Toplam Alınacak Miktar</div>
-								<div className="w-full h-1 bg-orange-200 rounded-full mt-3">
-									<div className="h-1 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full w-full" />
 								</div>
 							</div>
 						</div>
@@ -156,21 +119,6 @@ export default function PaymentClient({ paymentSummary, totalStats }: Props) {
 								<div className="space-y-1">
 									<h3 className="text-lg font-semibold text-gray-900">{clinic.name}</h3>
 									<p className="text-sm text-gray-600">{clinic.dentistCount} Hekim</p>
-								</div>
-
-								<div className="flex-1 mx-8 space-y-3">
-									<div className="flex justify-between text-sm">
-										<span>Ödeme Durumu: {clinic.paymentRate}%</span>
-										<span className="font-medium">
-											{clinic.remainingDebt > 0 
-												? `Kalan Borç: ${formatCurrency(clinic.remainingDebt)}`
-												: clinic.remainingDebt < 0
-													? `${formatCurrency(Math.abs(clinic.remainingDebt))} Alacaklı`
-													: 'Borçsuz'
-											}
-										</span>
-									</div>
-									<Progress value={clinic.paymentRate} className="h-2" />
 								</div>
 
 								<div className="text-right space-y-1 mr-4">

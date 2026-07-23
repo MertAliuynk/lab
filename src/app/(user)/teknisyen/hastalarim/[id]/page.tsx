@@ -267,6 +267,7 @@ export default function page() {
 												</div>
 											) : Object.entries(groupedWorks).length > 0 ? (
 												Object.entries(groupedWorks).map(([typeName, group]) => {
+													const isGroupCompleted = group.works.every((w) => w.isCompleted);
 													if (group.pricingType === "JAW_BASED" && group.allJaws.length > 0) {
 														const uniqueJaws = Array.from(new Set(group.allJaws));
 														const jawLabels = uniqueJaws.map(jaw => jaw === "UPPER" ? "Üst Çene" : jaw === "LOWER" ? "Alt Çene" : jaw);
@@ -278,8 +279,8 @@ export default function page() {
 																		{jawLabels.join(", ")} {typeName}
 																	</span>
 																</div>
-																<Badge variant={group.latestProgress >= 100 ? "default" : "secondary"} className="text-xs">
-																	{group.latestProgress >= 100 ? "Tamamlandı" : "Devam ediyor"}
+																<Badge variant={isGroupCompleted ? "default" : "secondary"} className="text-xs">
+																	{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 																</Badge>
 															</div>
 														);
@@ -294,8 +295,8 @@ export default function page() {
 																	{uniqueTeeth.length} Üye {typeName}
 																</span>
 															</div>
-															<Badge variant={group.latestProgress >= 100 ? "default" : "secondary"} className="text-xs">
-																{group.latestProgress >= 100 ? "Tamamlandı" : "Devam ediyor"}
+															<Badge variant={isGroupCompleted ? "default" : "secondary"} className="text-xs">
+																{isGroupCompleted ? "Tamamlandı" : "Devam ediyor"}
 															</Badge>
 														</div>
 													);

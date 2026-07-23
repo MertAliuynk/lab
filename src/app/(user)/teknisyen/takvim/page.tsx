@@ -11,6 +11,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
+const KURYE_NOTES = ["KURYEE_VERILDI", "KURYE_VERILDI", "TEKRAR_DOKTORA_VERILDI"];
+
 export default function DeliveryListPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [clinicId, setClinicId] = useState<string>("");
@@ -130,15 +132,22 @@ export default function DeliveryListPage() {
             </CardContent>
           </Card>
         ) : (
-          dentalWorks.map((work: any) => (
-            <Card
-              key={work.id}
-              className={
-                work.isCompleted
-                  ? "border-2 border-gray-500 bg-gray-100"
-                  : "border-2 border-orange-300 bg-orange-50/50"
-              }
-            >
+          dentalWorks.map((work: any) => {
+            const isGonderildi = !work.isCompleted && typeof work.notes === "string" && KURYE_NOTES.includes(work.notes);
+            const statusLabel = work.isCompleted ? "Tamamlandı" : isGonderildi ? "Gönderildi" : "Devam Ediyor";
+            const cardClassName = work.isCompleted
+              ? "border-2 border-gray-500 bg-gray-100"
+              : isGonderildi
+                ? "border-2 border-blue-300 bg-blue-50/50"
+                : "border-2 border-orange-300 bg-orange-50/50";
+            const badgeClassName = work.isCompleted
+              ? "border-gray-400 text-gray-700 bg-gray-50"
+              : isGonderildi
+                ? "border-blue-200 text-blue-700 bg-blue-50"
+                : "border-orange-200 text-orange-700 bg-orange-50";
+
+            return (
+            <Card key={work.id} className={cardClassName}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">
@@ -150,15 +159,8 @@ export default function DeliveryListPage() {
                     </Link>
                     {" - " + (work.prosthesisType?.name ?? "-")}
                   </CardTitle>
-                  <Badge
-                    variant="outline"
-                    className={
-                      work.isCompleted
-                        ? "border-gray-400 text-gray-700 bg-gray-50"
-                        : "border-orange-200 text-orange-700 bg-orange-50"
-                    }
-                  >
-                    {work.isCompleted ? "Tamamlandı" : "Devam Ediyor"}
+                  <Badge variant="outline" className={badgeClassName}>
+                    {statusLabel}
                   </Badge>
                 </div>
               </CardHeader>
@@ -174,7 +176,8 @@ export default function DeliveryListPage() {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
