@@ -67,6 +67,7 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 
 	const { data: clinics } = api.admin.dailyCashBox.getClinics.useQuery({});
 	const { data: dentists } = api.admin.dentist.getAll.useQuery({ perPage: 0 });
+	const { data: clinicPaymentSummary } = api.admin.payment.getClinicPaymentSummary.useQuery();
 	const { data: clinicPaymentDetail } = api.admin.payment.getClinicPaymentDetail.useQuery(
 		{ clinicId: selectedClinicId },
 		{ enabled: !!selectedClinicId }
@@ -154,15 +155,26 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 		? dentists?.filter((dentist) => dentist.clinicId === selectedClinicId)
 		: dentists;
 
-	// seçili şubenin borç kısmı burda bu hekimlerdeki gibi parantezdede yazmalı daha seçmeden önce 
-	const clinicDebtText = (() => {
-		if (!selectedClinicId || !clinicPaymentDetail) return null;
-		const remainingDebt = clinicPaymentDetail.summary.remainingDebt;
+	// Klinik isimlerine kalan borç/alacak bilgisini ekle (seçim listesinde görünsün diye)
+	const clinicsWithDebt = clinics?.map((clinic) => {
+		const clinicDebt = clinicPaymentSummary?.find((summary) => summary.id === clinic.id);
+		const remainingDebt = clinicDebt?.remainingDebt || 0;
 		const formattedAmount = Math.abs(remainingDebt).toLocaleString("tr-TR");
-		if (remainingDebt > 0) return `Şube Toplam Borcu: ${formattedAmount} ₺`;
-		if (remainingDebt < 0) return `Şube ${formattedAmount} ₺ Alacaklı`;
-		return "Şube Borçsuz";
-	})();
+
+		let statusText = "";
+		if (remainingDebt > 0) {
+			statusText = `(Kalan Borç: ${formattedAmount} ₺)`;
+		} else if (remainingDebt < 0) {
+			statusText = `(${formattedAmount} ₺ Alacaklı)`;
+		} else {
+			statusText = "(Borçsuz)";
+		}
+
+		return {
+			id: clinic.id,
+			name: `${clinic.name} ${statusText}`,
+		};
+	}) ?? [];
 
 	// Doktor isimlerine kalan borç/alacak bilgisini ekle
 	const dentistsWithDebt = filteredDentists?.map((dentist) => {
@@ -227,28 +239,12 @@ export default function AddIncomeModal({ isOpen, onClose, selectedDate, onSucces
 									<FormLabel>Klinik *</FormLabel>
 									<FormControl>
 										<Combobox
-											items={
-												clinics?.map((clinic) => ({
-													id: clinic.id,
-													name: clinic.name,
-												})) ?? []
-											}
+											items={clinicsWithDebt}
 											value={field.value}
 											onChange={field.onChange}
 											placeholder="Klinik seçiniz"
 										/>
 									</FormControl>
-									{clinicDebtText && (
-										<p
-											className={`text-xs font-medium ${
-												clinicPaymentDetail && clinicPaymentDetail.summary.remainingDebt > 0
-													? "text-red-600"
-													: "text-green-600"
-											}`}
-										>
-											{clinicDebtText}
-										</p>
-									)}
 									<FormMessage />
 								</FormItem>
 							)}
